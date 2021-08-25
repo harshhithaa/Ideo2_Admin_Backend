@@ -29,6 +29,12 @@ startServerProcess(logger);
 var middleware = require("./middleware/authenticator");
 app.use(middleware.AuthenticateRequest);
 
+var authenticationRoute = require("./routes/authenticationRoutes");
+app.use("/api/authentication", authenticationRoute);
+
+var adminRoute = require("./routes/adminRoutes");
+app.use("/api/admin", adminRoute);
+
 var customerRoute = require("./routes/customerRoutes");
 app.use("/api/customer", customerRoute);
 

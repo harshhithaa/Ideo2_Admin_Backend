@@ -2,10 +2,11 @@ var appLib = require("applib");
 var uuid = appLib.UUID.prototype;
 var databaseHelper = require("../helper/databasehelper");
 var coreRequestModel = require("../models/coreServiceModel");
+var joiValidationModel = require("../models/validationModel");
 var settings = require("../common/settings").Settings;
 var mailSettings = require("../common/settings").MailSettings;
 var constant = require("../common/constant");
-var momentTimezone = require("moment-timezone");
+var requestType = constant.RequestType;
 
 exports.AuthenticateRequest = async function (req, res, next) {
 
@@ -14,54 +15,24 @@ exports.AuthenticateRequest = async function (req, res, next) {
   var mailer = new appLib.Mailer(mailSettings);
   logger.logInfo(`AuthenticateRequest invoked()!`);
 
-  var functionContext = {
-    logger: logger,
-    res: res,
-  };
-
-  var requestData = null;
-
-  if(Object.keys(req.query).length > 0)
-  {
-    requestData = req.query;
-  }
-  else if(Object.keys(req.body).length > 0)
-  {
-    requestData = req.body;
-  }
-
-  var apiContext = {
-    requestID: requestID,
-    userType: null,
-    userRef: null,
-    userID: null,
-    currentTs: momentTimezone
-      .utc(new Date(), "YYYY-MM-DD HH:mm:ss.SSS")
-      .tz("Asia/Kolkata")
-      .format("YYYY-MM-DD HH:mm:ss.SSS"),
-    requestData : requestData,
-    requestHeaders :req.headers,
-    appVersion : req.headers.appversion,
-    databaseHelper : databaseHelper,
-    mailHelper : mailer, 
-    environment : settings.ENVIORNMENT,
-    req : req
-
-  };
-
-
-
+  var apiContext = new coreRequestModel.ApiContext(requestID);
   res.apiContext = apiContext;
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.AUTHENTICATEREQUEST,
+    null,
+    res,
+    logger,
+    mailer
+  );
 
   var validateRequest = new coreRequestModel.ValidateRequest(req);
   var validateResponse = new coreRequestModel.ValidateResponse(req);
-  validateResponse.RequestID = requestID;
+  var validateAPIRequest = joiValidationModel.validateRequest(validateRequest);
 
-  if (
-    !validateRequest.apiUri ||
-    !validateRequest.authorization 
-    // !validateRequest.appVersion
-  ) {
+  validateResponse.RequestID = requestID; 
+
+  if (validateAPIRequest.error) {
     functionContext.error = new coreRequestModel.ErrorModel(
       constant.ErrorMessage.Invalid_Request,
       constant.ErrorCode.Invalid_Request
@@ -95,6 +66,24 @@ exports.AuthenticateRequest = async function (req, res, next) {
     appLib.SendHttpResponse(functionContext, validateResponse);
     return;
   }
+
+  var authenticationResult = authentication(functionContext);
+
+  if (validateRequest.authorization != authenticationResult.basicAuth) {
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.Invalid_Authentication,
+      constant.ErrorCode.Invalid_Authentication
+    );
+    logger.logInfo(
+      `AuthenticateRequest() Error:: Invalid Authentication :: ${JSON.stringify(
+        validateRequest
+      )}`
+    );
+    validateResponse.Error = functionContext.error;
+    appLib.SendHttpResponse(functionContext, validateResponse);
+    return;
+  }
+
   try {
     let validateRequestResult = await databaseHelper.validateRequest(
       functionContext,
@@ -121,4 +110,19 @@ exports.AuthenticateRequest = async function (req, res, next) {
     validateResponse.Error = functionContext.error;
     appLib.SendHttpResponse(functionContext, validateResponse);
   }
+};
+
+
+var authentication = (functionContext) => {
+  var logger = functionContext.logger;
+
+  logger.logInfo(`authentication() Invoked! `);
+
+  var basicAuth = new Buffer.from(
+    settings.APP_KEY + ":" + settings.APP_SECRET
+  ).toString("base64");
+
+  return {
+    basicAuth: basicAuth,
+  };
 };

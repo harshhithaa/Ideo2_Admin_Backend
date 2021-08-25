@@ -14,9 +14,12 @@
   "license": "ISC",
   "homepage": "https://bitbucket.org/coppercodes/copperleaf#readme",
   "dependencies": {
+    "@hapi/joi": "^17.1.1",
     "applib": "file:../applib/applib-1.0.0.tgz",
     "async": "^3.2.0",
     "basic-ftp": "^4.6.1",
+    "bcrypt": "^5.0.1",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",

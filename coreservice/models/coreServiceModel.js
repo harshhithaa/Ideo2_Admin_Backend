@@ -1,4 +1,34 @@
 var momentTimezone = require("moment-timezone");
+
+class functionContext {
+  constructor(requestType, error, res, logger) {
+    (this.requestType = requestType),
+      (this.requestID = res.apiContext.requestID),
+      (this.userRef = res.apiContext.userRef),
+      (this.userType = res.apiContext.userType),
+      (this.userFirebaseAuth = res.apiContext.userFirebaseAuth),
+      (this.error = null),
+      (this.res = res),
+      (this.logger = logger),
+      (this.currentTs = momentTimezone
+        .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD HH:mm:ss"));
+  }
+}
+
+class apiContext {
+  constructor(requestID, mailer) {
+    (this.requestID = requestID),
+      (this.userRef = null),
+      (this.userType = null),
+      (this.userID = null),
+      (this.currentTs = momentTimezone
+        .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD HH:mm:ss"));
+  }
+}
 class errorModel {
   constructor(errorMessage, errorCode, errorDescription) {
     this.ErrorCode = errorCode;
@@ -7,7 +37,23 @@ class errorModel {
   }
 }
 
-class isCustomerPresentRequest {
+class validateRequest {
+  constructor(req) {
+    (this.apiUri = req.path),
+      (this.authToken = req.headers.authtoken),
+      (this.authorization = req.headers.authorization),
+      (this.appVersion = req.headers.appversion);
+  }
+}
+
+class validateResponse {
+  constructor() {
+    (this.Error = null), (this.RequestID = null), (this.Details = null);
+  }
+}
+
+
+class isAdminPresentRequest {
   constructor(req) {
     this.phone = req.body.Phone ? req.body.Phone : null;
     this.email = req.body.Email ? req.body.Email : null;
@@ -16,6 +62,53 @@ class isCustomerPresentRequest {
       .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
       .tz("Asia/Kolkata")
       .format("YYYY-MM-DD HH:mm:ss ");
+  }
+}
+
+class isAdminPresentResponse {
+      constructor() {
+        this.Details = {
+          CustomerRef: null,
+          VerificationStatus: null,
+          AuthToken: null,
+        };
+        (this.RequestID = null), (this.Error = null);
+      }
+    }
+
+class adminLoginRequest {
+  constructor(req) {
+    this.email = req.body.Email ? req.body.Email : null;
+    this.password = req.body.Password ? req.body.Password : null;
+  }
+}
+
+class adminLoginResponse {
+  constructor() {
+    (this.Error = {}),
+      (this.Details = {
+        AuthToken: null,
+        UserRef: null,
+        UserType: null
+      }),
+      (this.RequestID = null);
+  }
+}
+
+class saveSystemUserRequest {
+  constructor(req) {
+    this.adminRef = req.body.AdminRef ? req.body.AdminRef : null;
+    this.userName = req.body.UserName ? req.body.UserName : null;
+    this.email = req.body.Email ? req.body.Email : null;
+    this.phone = req.body.Phone ? req.body.Phone : null;
+    this.password = req.body.Password ? req.body.Password : null;
+    this.isActive = req.body.IsActive ? req.body.IsActive : 0;
+  }
+}
+
+class saveSystemUserResponse {
+  constructor() {
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 //this is for admin
@@ -106,6 +199,7 @@ class AddCustomerSite {
     this.State= req.body.State?req.body.State:null,
     this.Buildingname= req.body.Buildingname?req.body.Buildingname:null,
     this.Description= req.body.Description?req.body.Description:null,
+    
     this.Storey= req.body.Storey?req.body.Storey:null,
     this.Condition= req.body.Condition?req.body.Condition:null,
     this.TypeConstruction= req.body.TypeConstruction?req.body.TypeConstruction:null,
@@ -191,16 +285,6 @@ class paybill {
   }
 }
 //this is for admin
-class isCustomerPresentResponse {
-  constructor() {
-    this.Details = {
-      CustomerRef: null,
-      VerificationStatus: null,
-      AuthToken: null,
-    };
-    (this.RequestID = null), (this.Error = null);
-  }
-}
 class isriderrPresentResponse {
   constructor() {
     this.Details = {};
@@ -316,7 +400,6 @@ class SaveScreensURequest {
 
 class SaveScreensRequest {
   constructor(req) {
-    this.Customer = req.body.Customer ? req.body.Customer : null;
     this.MonitorRef = req.body.MonitorRef ? req.body.MonitorRef : null;
     this.MonitorName = req.body.MonitorName ? req.body.MonitorName : null;
     this.Comand = req.body.Comand ? req.body.Comand : null;
@@ -575,14 +658,6 @@ class playlistAppResponse {
       (this.RequestID = null);
   }
 }
-class validateRequest {
-  constructor(req) {
-    (this.apiUri = req.path),
-      (this.authToken = req.headers.authtoken),
-      (this.authorization = req.headers.authorization),
-      (this.appVersion = req.headers.appversion);
-  }
-}
 class validateRequestAdmin {
   constructor(req) {
     (this.apiUri = req.path),
@@ -591,11 +666,6 @@ class validateRequestAdmin {
   }
 }
 
-class validateResponse {
-  constructor() {
-    (this.Error = null), (this.RequestID = null), (this.Details = null);
-  }
-}
 
 class saveRestaurantRequest {
   constructor(req) {
@@ -855,13 +925,6 @@ class restaurantLoginRequest {
     this.password = req.body.Password ? req.body.Password : null;
   }
 }
-//this is for admin
-class adminLoginRequest {
-  constructor(req) {
-    this.userName = req.body.Username ? req.body.Username : null;
-    this.password = req.body.Password ? req.body.Password : null;
-  }
-}
 
 class restaurantLoginResponse {
   constructor() {
@@ -876,19 +939,6 @@ class restaurantLoginResponse {
   }
 }
 //this is for admin
-class adminLoginResponse {
-  constructor() {
-    (this.Error = null),
-      (this.Details = {
-        RestaurantRef: null,
-        AuthToken: null,
-        UserRef: null,
-        UserType: null,
-      }),
-      (this.RequestID = null);
-  }
-}
-
 class deliveryListRequest {
   constructor(req) {
     this.userRef = req.query.userref ? req.query.userref : null;
@@ -1618,6 +1668,17 @@ class saveBookingConfigResponse {
 }
 
 module.exports.ErrorModel = errorModel;
+module.exports.ValidateRequest = validateRequest;
+module.exports.ValidateResponse = validateResponse;
+module.exports.FunctionContext = functionContext;
+module.exports.ApiContext = apiContext;
+module.exports.IsAdminPresentRequest = isAdminPresentRequest;
+module.exports.IsAdminPresentResponse = isAdminPresentResponse;
+module.exports.SaveSystemUserRequest = saveSystemUserRequest;
+module.exports.SaveSystemUserResponse = saveSystemUserResponse;
+
+
+
 module.exports.validateScheduleRequest = validateScheduleRequest;
 
 module.exports.customerUploadResponse = customerUploadResponse;
@@ -1634,7 +1695,6 @@ module.exports.DaterangeRequest = DaterangeRequest;
 module.exports.DaterangeRequestForAdmin = DaterangeRequestForAdmin;
 //this is for admin
 module.exports.analyticsRequest = analyticsRequest;
-module.exports.IsCustomerPresentRequest = isCustomerPresentRequest;
 //this is for admin
 module.exports.AddRider = addRider;
 module.exports.AddCustomerSite = AddCustomerSite;
@@ -1645,7 +1705,6 @@ module.exports.Addpromoforsingle = addpromoforsingle;
 module.exports.Fetchusertax = fetchusertax;
 module.exports.Paybill = paybill;
 //this is for admin
-module.exports.IsCustomerPresentResponse = isCustomerPresentResponse;
 module.exports.IsriderrPresentResponse = isriderrPresentResponse;
 module.exports.GetCustomerAddressListRequest = getCustomerAddressListRequest;
 module.exports.GetCustomerAddressListResponse = getCustomerAddressListResponse;

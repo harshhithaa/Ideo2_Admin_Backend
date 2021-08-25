@@ -12,7 +12,6 @@ router.post("/deletemonitors", customerApi.SaveScreensUDEL);
 
 
 
-router.get("/getcustomerdetails", customerApi.GetCustomerDetails);
 router.post("/iscustomerpresent", customerApi.IsCustomerPresent);
 router.post("/login", customerApi.CustomerLogin);
 router.post("/loginapp", customerApi.CustomerLoginApp);
@@ -22,9 +21,7 @@ router.post("/upload", customerApi.CustomerUpload);
 router.post("/playlist", customerApi.CustomerPlaylist);
 router.post("/schedule", customerApi.CustomerSchedule);
 
-router.get("/getcustomeraddresslist", customerApi.GetCustomerAddressList);
 router.patch("/updatecustomerdetails", customerApi.UpdateCustomerDetails);
 
-router.post("/savecustomeraddress", customerApi.SaveCustomerAddress);
 
 module.exports = router;

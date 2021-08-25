@@ -11,86 +11,64 @@ var slashes = require("slashes");
 var FTPSettings = require("../common/settings").FTPSettings;
 var FileConfiguration = require("../common/settings").FileConfiguration;
 var ftp = require("basic-ftp");
-async function fileUpload(functionContext, resolvedResult) {
-  var logger = functionContext.logger;
-
-  logger.logInfo(`fileUpload() Invoked()`);
-
-  const client = new ftp.Client();
-  client.ftp.verbose = true;
-  try {
-    await client.access(FTPSettings);
-    await client.uploadFrom(resolvedResult.srcPath, resolvedResult.destPath);
-   
-  } catch (errFileUpload) {
-    logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(errFileUpload)}`);
-    functionContext.error = new coreRequestModel.ErrorModel(
-      constant.ErrorMessage.ApplicationError,
-      constant.ErrorCode.ApplicationError
-    );
-    throw functionContext.error;
-  }
-  client.close();
-
-  return;
-}
 
 module.exports.IsCustomerPresent = async (req, res) => {
   var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
-
+  
   logger.logInfo(`isCustomerPresent invoked()`);
-
+  
   var isCustomerPresentProfile = new coreRequestModel.IsCustomerPresentRequest(
     req
-  );
-
-  var functionContext = {
-    requestType: requestType.ISCUSTOMERPRESENT,
-    requestID: res.apiContext.requestID,
-    error: null,
-    res: res,
-    customerRef: uuid.GetTimeBasedID(),
-    logger: logger,
-  };
-
-  logger.logInfo(
-    `isCustomerPresent() :: Customer request: ${isCustomerPresentProfile}`
-  );
-
-  if (
-    isCustomerPresentProfile.loginType == constant.LoginType.PHONELOGIN &&
-    !isCustomerPresentProfile.phone
-  ) {
-    functionContext.error = new coreRequestModel.ErrorModel(
-      constant.ErrorMessage.Invalid_Request,
-      constant.ErrorCode.Invalid_Request
     );
+    
+    var functionContext = {
+      requestType: requestType.ISCUSTOMERPRESENT,
+      requestID: res.apiContext.requestID,
+      error: null,
+      res: res,
+      customerRef: uuid.GetTimeBasedID(),
+      logger: logger,
+    };
+    
     logger.logInfo(
-      `isCustomerPresent() :: Error :: Invalid Request :: Phone number missing ::  ${JSON.stringify(
-        isCustomerPresentProfile
-      )}`
-    );
-    isCustomerPresentResponse(functionContext, null);
-    return;
-  }
-  if (
-    isCustomerPresentProfile.loginType == constant.LoginType.EMAILLOGIN &&
-    !isCustomerPresentProfile.email
-  ) {
-    functionContext.error = new coreRequestModel.ErrorModel(
-      constant.ErrorMessage.Invalid_Request,
-      constant.ErrorCode.Invalid_Request
-    );
-    logger.logInfo(
-      `isCustomerPresent() :: Error :: Invalid Request :: Phone number missing :: ${JSON.stringify(
-        isCustomerPresentProfile
-      )}`
-    );
-    isCustomerPresentResponse(functionContext, null);
-    return;
-  }
-
-  var requestContext = {
+      `isCustomerPresent() :: Customer request: ${isCustomerPresentProfile}`
+      );
+      
+      if (
+        isCustomerPresentProfile.loginType == constant.LoginType.PHONELOGIN &&
+        !isCustomerPresentProfile.phone
+        ) {
+          functionContext.error = new coreRequestModel.ErrorModel(
+            constant.ErrorMessage.Invalid_Request,
+            constant.ErrorCode.Invalid_Request
+            );
+            logger.logInfo(
+              `isCustomerPresent() :: Error :: Invalid Request :: Phone number missing ::  ${JSON.stringify(
+                isCustomerPresentProfile
+                )}`
+                );
+                isCustomerPresentResponse(functionContext, null);
+                return;
+              }
+              if (
+                isCustomerPresentProfile.loginType == constant.LoginType.EMAILLOGIN &&
+                !isCustomerPresentProfile.email
+                ) {
+                  functionContext.error = new coreRequestModel.ErrorModel(
+                    constant.ErrorMessage.Invalid_Request,
+                    constant.ErrorCode.Invalid_Request
+                    );
+                    logger.logInfo(
+                      `isCustomerPresent() :: Error :: Invalid Request :: Phone number missing :: ${JSON.stringify(
+                        isCustomerPresentProfile
+                        )}`
+                        );
+                        isCustomerPresentResponse(functionContext, null);
+                        return;
+                      }
+                      
+                      var requestContext = {
+    
     email: isCustomerPresentProfile.email,
     phone: isCustomerPresentProfile.phone,
     loginType: isCustomerPresentProfile.loginType,
@@ -544,13 +522,6 @@ module.exports.GetMonitorItemDetails = async (req, res) => {
       GetMonitorItemDetailsResponse(functionContext, null);
     }
 };
-
-
-
-
-
-
-
 
 
 
@@ -2147,3 +2118,26 @@ var processCustomerAppsettings = (
   };
 };
 
+async function fileUpload(functionContext, resolvedResult) {
+  var logger = functionContext.logger;
+
+  logger.logInfo(`fileUpload() Invoked()`);
+
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+  try {
+    await client.access(FTPSettings);
+    await client.uploadFrom(resolvedResult.srcPath, resolvedResult.destPath);
+   
+  } catch (errFileUpload) {
+    logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(errFileUpload)}`);
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError
+    );
+    throw functionContext.error;
+  }
+  client.close();
+
+  return;
+}

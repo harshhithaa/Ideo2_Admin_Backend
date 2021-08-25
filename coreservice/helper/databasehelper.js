@@ -3,6 +3,178 @@ var coreRequestModel = require("../models/coreServiceModel");
 var constant = require("../common/constant");
 var general = require("./general");
 
+
+module.exports.fetchAdminLoginDetailsDB = async (
+  functionContext,
+  resolvedResult
+) => {
+  var logger = functionContext.logger;
+  logger.logInfo("fetchAdminLoginDetailsDB() Invoked!");
+    try {
+      let rows = await databaseModule.knex.raw(
+      `CALL usp_fetch_admin_login_details('${resolvedResult.email}')`
+      );
+    logger.logInfo(
+      `fetchAdminLoginDetailsDB() :: Returned Result :: ${JSON.stringify(
+        rows[0][0]
+      )}`
+    );
+    var result = rows[0][0][0] ? rows[0][0][0] : null;
+    return result;
+  } catch (errfetchAdminLoginDetailsDBDB) {
+    logger.logInfo(
+      `fetchAdminLoginDetailsDBDB() :: Error :: ${JSON.stringify(
+        errfetchAdminLoginDetailsDBDB
+      )}`
+    );
+    var errorCode = null;
+    var errorMessage = null;
+    if (
+      errfetchAdminLoginDetailsDBDB.sqlState &&
+      errfetchAdminLoginDetailsDBDB.sqlState == constant.ErrorCode.Invalid_User
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User;
+      errorMessage = constant.ErrorMessage.Invalid_User;
+    } else if (
+      errfetchAdminLoginDetailsDBDB.sqlState &&
+      errfetchAdminLoginDetailsDBDB.sqlState ==
+        constant.ErrorCode.Invalid_User_Name_Or_Password
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User_Name_Or_Password;
+      errorMessage = constant.ErrorMessage.Invalid_User_Name_Or_Password;
+    } else {
+      errorCode = constant.ErrorCode.ApplicationError;
+      errorMessage = constant.ErrorMessage.ApplicationError;
+    }
+    functionContext.error = new coreRequestModel.ErrorModel(
+      errorMessage,
+      errorCode
+    );
+    throw functionContext.error;
+  }
+};
+
+module.exports.adminLoginDB = async (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+  logger.logInfo("adminLoginDB() Invoked!");
+  try {
+    let rows = await databaseModule.knex.raw(
+      `CALL usp_admin_login('${resolvedResult.email}','${resolvedResult.ipaddress}','${resolvedResult.firebaseAuth}','${resolvedResult.metaData}','${resolvedResult.userAgent}','${functionContext.currentTs}')`
+    );
+    logger.logInfo(
+      `adminLoginDB() :: Returned Result :: ${JSON.stringify(rows[0][0])}`
+    );
+    var result = rows[0][0][0] ? rows[0][0][0] : null;
+    return result;
+  } catch (errAdminLoginDB) {
+    logger.logInfo(
+      `adminLoginDB() :: Error :: ${JSON.stringify(errAdminLoginDB)}`
+    );
+    var errorCode = null;
+    var errorMessage = null;
+    if (
+      errAdminLoginDB.sqlState &&
+      errAdminLoginDB.sqlState == constant.ErrorCode.Invalid_User
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User;
+      errorMessage = constant.ErrorMessage.Invalid_User;
+    } else if (
+      errAdminLoginDB.sqlState &&
+      errAdminLoginDB.sqlState ==
+        constant.ErrorCode.Invalid_User_Name_Or_Password
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User_Name_Or_Password;
+      errorMessage = constant.ErrorMessage.Invalid_User_Name_Or_Password;
+    } else {
+      errorCode = constant.ErrorCode.ApplicationError;
+      errorMessage = constant.ErrorMessage.ApplicationError;
+    }
+    functionContext.error = new coreRequestModel.ErrorModel(
+      errorMessage,
+      errorCode
+    );
+    throw functionContext.error;
+  }
+};
+
+module.exports.adminLogoutInDB = async (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+  logger.logInfo("adminLogoutInDB() Invoked!");
+
+  try {
+    let result = await databaseModule.knex.raw(
+      `CALL usp_user_logout('${functionContext.userRef}',${functionContext.userType},'${functionContext.currentTs}')`
+    );
+
+    logger.logInfo("adminLogoutInDB() :: admin Logged out Successfully");
+    return result;
+  } catch (erradminLogout) {
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError
+    );
+    logger.logInfo(
+      `adminLogoutInDB() :: Error :: ${JSON.stringify(erradminLogout)}`
+    );
+    throw functionContext.error;
+  }
+};
+
+module.exports.saveSystemUserDB = async (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+  logger.logInfo("saveSystemUserDB() Invoked!");
+  try {
+    let rows = await databaseModule.knex.raw(
+      "CALL usp_save_system_users(:adminRef,:userName,:email,:phone, :password,:passwordHash,:isActive,:currentTs)",
+      {
+        adminRef: resolvedResult.adminRef,
+        userName: resolvedResult.userName,
+        email: resolvedResult.email,
+        phone: resolvedResult.phone,
+        password: resolvedResult.password,
+        passwordHash: resolvedResult.passwordHash,
+        isActive: resolvedResult.isActive,
+        currentTs: functionContext.currentTs,
+      }
+    );
+
+    logger.logInfo(
+      `saveSystemUserDB() :: Returned Result :: ${JSON.stringify(rows[0][0])}`
+    );
+    var result = rows[0][0][0] ? rows[0][0][0] : null;
+    return result;
+  } catch (errsaveSystemUserDB) {
+    logger.logInfo(
+      `saveSystemUserDB() :: Error :: ${JSON.stringify(errsaveSystemUserDB)}`
+    );
+    var errorCode = null;
+    var errorMessage = null;
+    if (
+      errsaveSystemUserDB.sqlState &&
+      errsaveSystemUserDB.sqlState == constant.ErrorCode.Invalid_User
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User;
+      errorMessage = constant.ErrorMessage.Invalid_User;
+    } else if (
+      errsaveSystemUserDB.sqlState &&
+      errsaveSystemUserDB.sqlState ==
+        constant.ErrorCode.Invalid_User_Name_Or_Password
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User_Name_Or_Password;
+      errorMessage = constant.ErrorMessage.Invalid_User_Name_Or_Password;
+    } else {
+      errorCode = constant.ErrorCode.ApplicationError;
+      errorMessage = constant.ErrorMessage.ApplicationError;
+    }
+    functionContext.error = new coreRequestModel.ErrorModel(
+      errorMessage,
+      errorCode
+    );
+    throw functionContext.error;
+  }
+};
+
+
 module.exports.getCustomerDetailsFromDB = async (
   functionContext,
   resolvedResult
