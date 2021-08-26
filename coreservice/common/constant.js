@@ -361,7 +361,7 @@ module.exports.FeedbackRatingType = {
   Conditional : 3
 };
 
-module.exports.AppType = {
+module.exports.APPTYPE = {
   Android: 1,
   iOS: 2,
 };

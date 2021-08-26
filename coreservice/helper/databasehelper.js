@@ -59,7 +59,7 @@ module.exports.adminLoginDB = async (functionContext, resolvedResult) => {
   logger.logInfo("adminLoginDB() Invoked!");
   try {
     let rows = await databaseModule.knex.raw(
-      `CALL usp_admin_login('${resolvedResult.email}','${resolvedResult.ipaddress}','${resolvedResult.firebaseAuth}','${resolvedResult.metaData}','${resolvedResult.userAgent}','${functionContext.currentTs}')`
+      `CALL usp_admin_login('${resolvedResult.email}','${functionContext.currentTs}')`
     );
     logger.logInfo(
       `adminLoginDB() :: Returned Result :: ${JSON.stringify(rows[0][0])}`
@@ -869,7 +869,7 @@ module.exports.validateRequest = async (functionContext, resolvedResult) => {
     let result = await databaseModule.knex.raw(
       `CALL usp_validate_request('${resolvedResult.apiUri}','${resolvedResult.authToken}')`
     );
-    logger.logInfo("validateRequest() :: Api validanted Successfully");
+    logger. logInfo("validateRequest() :: Api validanted Successfully");
     return result[0][0][0];
   } catch (errValidateRequest) {
     logger.logInfo(
