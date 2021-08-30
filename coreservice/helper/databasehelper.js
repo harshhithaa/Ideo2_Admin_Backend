@@ -174,7 +174,6 @@ module.exports.saveSystemUserDB = async (functionContext, resolvedResult) => {
   }
 };
 
-
 module.exports.getAdminComponentsDB = async (
   functionContext,
   resolvedResult
@@ -417,11 +416,6 @@ module.exports.SaveScreensUInDB = async (
     throw errSaveScreensU;
   }
 };
-
-
-
-
-
 // ///////////////////////////////////////////////////////////////////////////////
 
 module.exports.SaveScreensInDB = async (
@@ -1374,7 +1368,7 @@ module.exports.savePlaylistDB = async (
         rows[0][0]
       )}` 
     );
-    var result = rows[0][0] ? rows[0][0] : null;
+    var result = rows[0][0][0] ? rows[0][0][0] : null;
     return result;
   } catch (errsavePlaylistDB) {
     logger.logInfo(

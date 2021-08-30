@@ -52,7 +52,7 @@ module.exports.saveMediaRequest = (requestParams) => {
   return joiSchema.validate(requestParams);
 };
 
-module.exports.getAdminCompenentRequest = (requestParams) => {
+module.exports.getAdminComponentRequest = (requestParams) => {
   var joiSchema = joi.object({
     componentType: joi.number().valid(constant.COMPONENTS.Media,constant.COMPONENTS.Playlist,constant.COMPONENTS.Schedule,constant.COMPONENTS.Monitor)
   });
@@ -61,7 +61,7 @@ module.exports.getAdminCompenentRequest = (requestParams) => {
 
 module.exports.savePlaylistRequest = (requestParams) => {
   var joiSchema = joi.object({
-    playlistRef: joi.string().required(),
+    playlistRef: joi.string().required().allow(null),
     playlistName: joi.string().required(),
     description: joi.string().optional().allow(null),
     isActive: joi.number().required(),

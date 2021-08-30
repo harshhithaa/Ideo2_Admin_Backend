@@ -122,6 +122,25 @@ class getAdminComponentResponse {
     (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
+class savePlaylistRequest {
+  constructor(req) {
+    this.playlistRef = req.body.PlaylistRef ? req.body.PlaylistRef : null;
+    this.playlistName = req.body.PlaylistName ? req.body.PlaylistName : null;
+    this.playlist = req.body.Playlist ? req.body.Playlist : null;
+    this.description = req.body.Description ? req.body.Description : null;
+    this.isActive = req.body.IsActive ? req.body.IsActive : null;
+    this.currentTs = momentTimezone
+    .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
+    .tz("Asia/Kolkata")
+    .format("YYYY-MM-DD HH:mm:ss ");
+  }
+}
+
+class savePlaylistResponse {
+  constructor() {
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
+  }
+}
 
 class saveMediaRequest {
   constructor(req) {
@@ -551,7 +570,6 @@ class getRestaurantItemDetailsResponse {
   }
 }
 
-// //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Get Packages
 
@@ -568,7 +586,6 @@ class GetPackageItemDetailsResponse {
   }
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Get Monitors
 
@@ -1710,6 +1727,8 @@ module.exports.SaveMediaRequest = saveMediaRequest;
 module.exports.SaveMediaResponse = saveMediaResponse;
 module.exports.GetAdminComponentRequest = getAdminComponentRequest;
 module.exports.GetAdminComponentResponse = getAdminComponentResponse;
+module.exports.SavePlaylistRequest = savePlaylistRequest;
+module.exports.SavePlaylistResponse = savePlaylistResponse;
 
 
 

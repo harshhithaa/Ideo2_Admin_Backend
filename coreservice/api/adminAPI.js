@@ -157,7 +157,7 @@ module.exports.GetAdminComponents = async (req, res) => {
       `GetAdminComponents() :: Request Object : ${getAdminComponentsRequest}`
     );
   
-    var validateRequest = joiValidationModel.getAdminCompenentRequest(
+    var validateRequest = joiValidationModel.getAdminComponentRequest(
       getAdminComponentsRequest
     );
   
@@ -172,7 +172,7 @@ module.exports.GetAdminComponents = async (req, res) => {
           getAdminComponentsRequest
         )}`
       );
-      saveSystemUserResponse(functionContext, null);
+      getAdminComponentsResponse(functionContext, null);
       return;
     }
 
@@ -205,6 +205,80 @@ module.exports.GetAdminComponents = async (req, res) => {
       )}`
     );
     getAdminComponentsResponse(functionContext, null);
+  }
+};
+
+module.exports.SavePlaylist = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+
+  logger.logInfo(`SavePlaylist invoked()!!`);
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.SAVEPLAYLIST,
+    null,
+    res,
+    logger
+  );
+
+
+  var savePlaylistRequest = new coreRequestModel.SavePlaylistRequest(req);
+  
+    logger.logInfo(
+      `savePlaylist() :: Request Object : ${savePlaylistRequest}`
+    );
+  
+    var validateRequest = joiValidationModel.savePlaylistRequest(
+      savePlaylistRequest
+    );
+  
+    if (validateRequest.error) {
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.Invalid_Request,
+        constant.ErrorCode.Invalid_Request,
+        validateRequest.error.details
+      );
+      logger.logInfo(
+        `savePlaylist() Error:: Invalid Request :: ${JSON.stringify(
+          savePlaylistRequest
+        )}`
+      );
+      savePlaylistResponse(functionContext, null);
+      return;
+    }
+
+
+  var requestContext={
+    userRef:functionContext.userRef,
+   ...savePlaylistRequest
+  }
+
+
+  try {
+    var savePlaylistInDBResponse = await databaseHelper.savePlaylistDB(
+      functionContext,
+      requestContext
+    );
+    savePlaylistResponse(functionContext, savePlaylistInDBResponse);
+  } catch (errSavePlaylist) {
+    if (!errSavePlaylist.ErrorMessage && !errSavePlaylist.ErrorCode) {
+      logger.logInfo(`SavePlaylist() :: Error :: ${errSavePlaylist}`);
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.ApplicationError,
+        constant.ErrorCode.ApplicationError,
+        
+      );
+    }else {
+      logger.logInfo(`SavePlaylist() :: Error :: ${errSavePlaylist}`);
+      functionContext.error = new coreRequestModel.ErrorModel(
+        errSavePlaylist.ErrorMessage ,
+        errSavePlaylist.ErrorCode,
+        errSavePlaylist.ErrorDescription
+        
+      );
+
+    }
+    logger.logInfo(`SavePlaylist() :: Error :: ${JSON.stringify(errSavePlaylist)}`);
+    savePlaylistResponse(functionContext, null);
   }
 };
 
@@ -272,12 +346,12 @@ var processMedia=async (functionContext,req,requestContext)=>{
             requestContext.file.destPath = fileConfiguration.RemoteStorage +file.filename;
             requestContext.file.fileUrl = fileConfiguration.FileUrl +file.filename;
 
-            var uploadFile = await fileUpload(functionContext, requestContext.file);
           }
-
+          
         }        
-        requestContext.fileUploadDetails.push({fileName:file.filename,fileMimetype:file.mimetype,fileUrl:requestContext.file.fileUrl})
+        requestContext.fileUploadDetails.push({fileName:file.filename,fileMimetype:file.mimetype,fileUrl:requestContext.file.fileUrl,srcPath:requestContext.file.srcPath,destPath:requestContext.file.destPath})
       }   
+      var uploadFile = await fileUpload(functionContext, requestContext.fileUploadDetails);
     }  
   }
   
@@ -330,7 +404,12 @@ async function fileUpload(functionContext, resolvedResult) {
   client.ftp.verbose = true;
   try {
     await client.access(FTPSettings);
-    await client.uploadFrom(resolvedResult.srcPath, resolvedResult.destPath);
+
+    for (let file = 0; file < resolvedResult.length; file++) {
+      const item = resolvedResult[file];
+      await client.uploadFrom(item.srcPath, item.destPath);
+      
+    }
    
   } catch (errFileUpload) {
     logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(errFileUpload)}`);
@@ -380,4 +459,26 @@ var getAdminComponentsResponse = async (functionContext, resolvedResult) => {
     `getAdminComponentsResponse  Response :: ${JSON.stringify(getAdminComponentsResponse)}`
   );
   logger.logInfo(`getAdminComponentsResponse completed`);
+};
+
+var savePlaylistResponse = async (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+
+  logger.logInfo(`savePlaylistResponse() invoked`);
+
+  var savePlaylistResponse = new coreRequestModel.SavePlaylistResponse();
+
+  savePlaylistResponse.RequestID = functionContext.requestID;
+  if (functionContext.error) {
+    savePlaylistResponse.Error = functionContext.error;
+    savePlaylistResponse.Details = null;
+  } else {    
+    savePlaylistResponse.Details.PlaylistRef =resolvedResult.PlaylistRef;
+  }
+  appLib.SendHttpResponse(functionContext, savePlaylistResponse);
+
+  logger.logInfo(
+    `savePlaylistResponse  Response :: ${JSON.stringify(savePlaylistResponse)}`
+  );
+  logger.logInfo(`savePlaylistResponse completed`);
 };
