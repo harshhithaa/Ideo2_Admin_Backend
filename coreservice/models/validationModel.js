@@ -110,3 +110,10 @@ module.exports.saveMonitorRequest = (requestParams) => {
   });
   return joiSchema.validate(requestParams);
 };
+module.exports.getAdminCompenentRequest = (requestParams) => {
+  var joiSchema = joi.object({
+    componentType: joi.number().required().valid(constant.COMPONENTS.Media,constant.COMPONENTS.Playlist,constant.COMPONENTS.Schedule,constant.COMPONENTS.Monitor),   
+
+  });
+  return joiSchema.validate(requestParams);
+};

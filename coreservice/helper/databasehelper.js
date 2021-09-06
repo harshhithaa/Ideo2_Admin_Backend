@@ -1,5 +1,5 @@
 var databaseModule = require("../database/database");
-var coreRequestModel = require("../models/coreServiceModel");
+var coreRequestModel = require("../models/coreserviceModel");
 var constant = require("../common/constant");
 var general = require("./general");
 
@@ -525,39 +525,23 @@ module.exports.getscheduleDetailsInDB = async (
   }
 };
 
-module.exports.getPlaylistDetailsInDB = async (
+module.exports.getAdminComponentListInDB = async (
   functionContext,
   resolvedResult
 ) => {
   var logger = functionContext.logger;
-  logger.logInfo("saveDeliveryDetailsInDB() Invoked!");
+  logger.logInfo("getAdminComponentListInDB() Invoked!");
 
-  logger.logInfo(`saveDeliveryDetailsInDB() :: CALL usp_getcustomerappplaylist('${
-    resolvedResult.scheduleRef
-  }',
-		'${resolvedResult.customerRef}'
-										
-										
-											)`);
 
   try {
     let result = await databaseModule.knex.raw(
-      `CALL usp_getcustomerappplaylist('${resolvedResult.scheduleRef}',
-											'${resolvedResult.customerRef}',
-                      	'${resolvedResult.currentTimestamp}'
-										
-										
-											)`
-    );
+      `CALL usp_get_admin_components('${functionContext.userRef}','${resolvedResult.componentType}')`);
 
-    logger.logInfo(`saveDeliveryDetailsInDB() :: Data Saved Successfully${JSON.stringify(
+    logger.logInfo(`getAdminComponentListInDB() :: Data Saved Successfully${JSON.stringify(
         result[0][0]
       )}`);
-    // return result[0][0];
-     return {
-      BasicDetails: result[0][0],
-      BasicDetails1: result[0][1],
-    };
+    return result[0][0];
+  
   } catch (errSaveDeliveryDetailsInDB) {
     logger.logInfo(
       `saveDeliveryDetailsInDB() :: Error :: ${JSON.stringify(

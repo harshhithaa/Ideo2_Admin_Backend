@@ -1,5 +1,5 @@
 var databaseHelper = require("../helper/databasehelper");
-var coreRequestModel = require("../models/coreServiceModel");
+var coreRequestModel = require("../models/coreserviceModel");
 var constant = require("../common/constant");
 var joiValidationModel = require("../models/validationModel");
 var requestType = constant.RequestType;

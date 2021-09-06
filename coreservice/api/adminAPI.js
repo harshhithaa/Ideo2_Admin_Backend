@@ -408,7 +408,7 @@ module.exports.GetAdminComponents = async (req, res) => {
 
   try {
  
-     var adminComponentsResult = await databaseHelper.getPlaylistDetailsInDB(
+     var adminComponentsResult = await databaseHelper.getAdminComponentListInDB(
       functionContext,
       getAdminComponentsRequest
     );
@@ -587,22 +587,18 @@ var getAdminComponentsResponse = async (functionContext, resolvedResult) => {
     getAdminComponentsResponse.Error = functionContext.error;
     getAdminComponentsResponse.Details = null;
   } else {
-    var documents = [];
-    if(resolvedResult.fileUploadDetails && resolvedResult.fileUploadDetails.length){
-      for (let count = 0; count < resolvedResult.fileUploadDetails.length; count++) {
-        var fileDocument = resolvedResult.fileUploadDetails[count];
-        var fileName  = fileDocument.fileName;
-        var fileKey  = fileDocument.fileKey;
-        var preSignedUrl = await awsHelper.getPreSignedUrl(functionContext,"Media/",fileName)
-        documents.push({
-          DocumentUrl:preSignedUrl,
-          DocumentKey: fileKey
-          
-        })
-      }
-    }
-    getAdminComponentsResponse.Error = null;
-    getAdminComponentsResponse.Details.Documents =documents;
+   
+      let componentList=[]
+  
+      resolvedResult.forEach(element => {
+        componentList.push(element)
+      });
+  
+    
+     
+      getAdminComponentsResponse.Error = null;
+      getAdminComponentsResponse.Details.ComponentList =componentList;
+
   }
   appLib.SendHttpResponse(functionContext, getAdminComponentsResponse);
 
