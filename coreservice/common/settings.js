@@ -21,8 +21,7 @@ module.exports.FileConfiguration = {
   secure: false,
 };
 
-module.exports.PushNotificationSettings = {
- };
+
 
 module.exports.MailSettings = {
   Username : process.env.MailUsername,

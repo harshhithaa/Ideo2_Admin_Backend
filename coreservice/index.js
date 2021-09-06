@@ -1,7 +1,5 @@
 require("dotenv").config({ path: __dirname + "/.envconfig" });
 var settings = require("./common/settings").Settings;
-var pushNotificationSettings = require("./common/settings")
-  .PushNotificationSettings;
 var databaseModule = require("./database/database");
 var express = require("express");
 var app = express();
@@ -46,7 +44,6 @@ async function startServerProcess(logger) {
     await appLib.fetchDBSettings(
       logger,
       settings,
-      pushNotificationSettings,
       databaseModule
     );
  
