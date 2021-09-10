@@ -113,7 +113,7 @@ class saveSystemUserResponse {
 }
 class getAdminComponentRequest {
   constructor(req) {
-    this.componentType = req.body.ComponentType ? req.body.ComponentType : null;
+    this.componentType = req.query.componenttype ? req.query.componenttype : null;
   }
 }
 

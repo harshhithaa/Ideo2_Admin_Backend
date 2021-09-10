@@ -415,22 +415,22 @@ module.exports.GetAdminComponents = async (req, res) => {
   
 
     await getAdminComponentsResponse(functionContext, adminComponentsResult);
-  } catch (errValidatePlaceDelivery) {
+  } catch (errGetAdminComponents) {
     if (
-      !errValidatePlaceDelivery.ErrorMessage &&
-      !errValidatePlaceDelivery.ErrorCode
+      !errGetAdminComponents.ErrorMessage &&
+      !errGetAdminComponents.ErrorCode
     ) {
       logger.logInfo(
-        `errPlaceDelivery() :: Error :: ${errValidatePlaceDelivery}`
+        `errPlaceDelivery() :: Error :: ${errGetAdminComponents}`
       );
       functionContext.error = new coreRequestModel.ErrorModel(
         constant.ErrorMessage.ApplicationError,
         constant.ErrorCode.ApplicationError,
-        JSON.stringify(errValidatePlaceDelivery)
+        JSON.stringify(errGetAdminComponents)
       );
     }
     logger.logInfo(
-      `ValidatePlaceDelivery() :: Error :: ${JSON.stringify(
+      `GetAdminComponents() :: Error :: ${JSON.stringify(
         errValidatePlaceDelivery
       )}`
     );
@@ -580,7 +580,7 @@ var getAdminComponentsResponse = async (functionContext, resolvedResult) => {
 
   logger.logInfo(`getAdminComponentsResponse() invoked`);
 
-  var getAdminComponentsResponse = new coreRequestModel.GetAdminComponentRequest();
+  var getAdminComponentsResponse = new coreRequestModel.GetAdminComponentResponse();
 
   getAdminComponentsResponse.RequestID = functionContext.requestID;
   if (functionContext.error) {
