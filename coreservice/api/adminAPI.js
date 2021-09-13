@@ -177,15 +177,9 @@ module.exports.SavePlaylist = async (req, res) => {
 
 
   var requestContext={
-    fileUploadDetails:[],
+    ...savePlaylistRequest,
     userRef:functionContext.userRef,
-    file:{
-      fileName:null,
-      fileMimetype:null,
-      srcPath:null,
-      destPath:null,
-      fileUrl:null,
-    }
+    
   }
 
 
