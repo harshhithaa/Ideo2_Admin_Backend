@@ -61,7 +61,7 @@ module.exports.getAdminComponentRequest = (requestParams) => {
 
 module.exports.savePlaylistRequest = (requestParams) => {
   var joiSchema = joi.object({
-    playlistRef: joi.string().required().allow(null),
+    playlistRef: joi.string().optional().allow(null),
     playlistName: joi.string().required(),
     description: joi.string().optional().allow(null),
     isActive: joi.number().required(),

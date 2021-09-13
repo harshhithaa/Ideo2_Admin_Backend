@@ -163,7 +163,7 @@ class saveMonitorResponse {
 }
 class savePlaylistRequest {
   constructor(req) {
-    this.playlistReference = req.body.PlaylistReference ? req.body.PlaylistReference : null;
+    this.playlistRef = req.body.PlaylistReference ? req.body.PlaylistReference : null;
     this.playlistName = req.body.PlaylistName ? req.body.PlaylistName : null;
     this.description = req.body.Description ? req.body.Description : null;
     this.playlist = req.body.Playlist ? req.body.Playlist : null;
@@ -178,7 +178,7 @@ class savePlaylistResponse {
   constructor() {
     (this.Error = null),
       (this.Details = {
-        Media: [],
+        PlaylistReference: null,
       }),
       (this.RequestID = null);
   }

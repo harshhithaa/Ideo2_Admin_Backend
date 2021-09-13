@@ -195,7 +195,7 @@ module.exports.SavePlaylist = async (req, res) => {
       functionContext,
       requestContext
     );
-    savePlaylistResponse(functionContext, requestContext);
+    savePlaylistResponse(functionContext, savePlaylistInDBResponse);
   } catch (errSavePlaylist) {
     if (!errSavePlaylist.ErrorMessage && !errSavePlaylist.ErrorCode) {
       logger.logInfo(`SavePlaylist() :: Error :: ${errSavePlaylist}`);
@@ -431,7 +431,7 @@ module.exports.GetAdminComponents = async (req, res) => {
     }
     logger.logInfo(
       `GetAdminComponents() :: Error :: ${JSON.stringify(
-        errValidatePlaceDelivery
+        errGetAdminComponents
       )}`
     );
     getAdminComponentsResponse(functionContext, null);
@@ -620,22 +620,7 @@ var savePlaylistResponse = async (functionContext, resolvedResult) => {
     savePlaylistResponse.Error = functionContext.error;
     savePlaylistResponse.Details = null;
   } else {
-    var documents = [];
-    if(resolvedResult.fileUploadDetails && resolvedResult.fileUploadDetails.length){
-      for (let count = 0; count < resolvedResult.fileUploadDetails.length; count++) {
-        var fileDocument = resolvedResult.fileUploadDetails[count];
-        var fileName  = fileDocument.fileName;
-        var fileKey  = fileDocument.fileKey;
-        var preSignedUrl = await awsHelper.getPreSignedUrl(functionContext,"Playlist/",fileName)
-        documents.push({
-          DocumentUrl:preSignedUrl,
-          DocumentKey: fileKey
-          
-        })
-      }
-    }
-    savePlaylistResponse.Error = null;
-    savePlaylistResponse.Details.Documents =documents;
+    savePlaylistResponse.Details.PlaylistReference =resolvedResult.PlaylistRef;
   }
   appLib.SendHttpResponse(functionContext, savePlaylistResponse);
 
