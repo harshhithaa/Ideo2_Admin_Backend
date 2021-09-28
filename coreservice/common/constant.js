@@ -39,7 +39,8 @@ module.exports.RequestType = {
   GETADMINCOMPONENTS:"GAC",
   SAVESCHEDULE:"SS",
   SAVEMONITOR:"SM",
-};
+  DELETEADMINCOMPONENTS:"DAC",
+};  
 
 
 module.exports.CustomerVerificationStatus = {

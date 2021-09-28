@@ -206,6 +206,25 @@ class saveScheduleResponse {
       (this.RequestID = null);
   }
 }
+class deleteAdminComponentsRequest {
+  constructor(req) {
+    this.componentType = req.body.ComponentType ? req.body.ComponentType : null;
+    this.componentList = req.body.ComponentList ? req.body.ComponentList : null;
+    this.currentTs = momentTimezone
+      .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
+      .tz("Asia/Kolkata")
+      .format("YYYY-MM-DD HH:mm:ss ");
+  }
+}
+class deleteAdminComponentsResponse {
+  constructor() {
+    (this.Error = null),
+      (this.Details = {
+        IsDeleted:false
+      }),
+      (this.RequestID = null);
+  }
+}
 //this is for admin
 class DaterangeRequest {
   constructor(req) {
@@ -1717,6 +1736,8 @@ module.exports.SaveScheduleRequest = saveScheduleRequest;
 module.exports.SaveScheduleResponse = saveScheduleResponse;
 module.exports.SaveMonitorRequest = saveMonitorRequest;
 module.exports.SaveMonitorResponse = saveMonitorResponse;
+module.exports.DeleteAdminComponentsRequest = deleteAdminComponentsRequest;
+module.exports.DeleteAdminComponentsResponse = deleteAdminComponentsResponse;
 
 
 

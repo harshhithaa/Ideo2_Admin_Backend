@@ -569,6 +569,50 @@ module.exports.getAdminComponentListInDB = async (
   }
 };
 
+module.exports.deleteAdminComponentListInDB = async (
+  functionContext,
+  resolvedResult
+) => {
+  var logger = functionContext.logger;
+  logger.logInfo("deleteAdminComponentListInDB() Invoked!");
+
+
+  try {
+    let result = await databaseModule.knex.raw(`CALL usp_delete_admin_components('${functionContext.userRef}','${resolvedResult.componentType}','${JSON.stringify(resolvedResult.componentList)}')`);
+
+
+    logger.logInfo(`deleteAdminComponentListInDB() :: Data Saved Successfully${JSON.stringify(
+        result[0][0]
+      )}`);
+    return result[0][0];
+  
+  } catch (errdeleteAdminComponentListInDB) {
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: Error :: ${JSON.stringify(
+        errdeleteAdminComponentListInDB
+      )}`
+    );
+    var errorCode = null;
+    var errorMessage = null;
+    if (
+      errdeleteAdminComponentListInDB.sqlState &&
+      errdeleteAdminComponentListInDB.sqlState == constant.ErrorCode.Invalid_User
+    ) {
+      errorCode = constant.ErrorCode.Invalid_User;
+      errorMessage = constant.ErrorMessage.Invalid_User;
+    } else {
+      errorCode = constant.ErrorCode.ApplicationError;
+      errorMessage = constant.ErrorMessage.ApplicationError;
+    }
+    functionContext.error = new coreRequestModel.ErrorModel(
+      errorMessage,
+      errorCode,
+      JSON.stringify(errSaveRestaurantItemDetailsDB)
+    );
+    throw functionContext.error;
+  }
+};
+
 module.exports.validateRequest = async (functionContext, resolvedResult) => {
   var logger = functionContext.logger;
   logger.logInfo("validateRequest() Invoked!");

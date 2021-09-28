@@ -10,6 +10,7 @@ router.post("/saveplaylist", adminApi.SavePlaylist);
 router.post("/saveschedule", adminApi.SaveSchedule);
 router.post("/savemonitor", adminApi.SaveMonitor);
 router.get("/componentlist", adminApi.GetAdminComponents);
+router.post("/deletecomponentlist", adminApi.DeleteAdminComponents);
 
 module.exports = router;
 

@@ -118,3 +118,13 @@ module.exports.getAdminCompenentRequest = (requestParams) => {
   });
   return joiSchema.validate(requestParams);
 };
+
+module.exports.deleteAdminCompenentRequest = (requestParams) => {
+  var joiSchema = joi.object({
+    componentType: joi.number().required().valid(constant.COMPONENTS.Media,constant.COMPONENTS.Playlist,constant.COMPONENTS.Schedule,constant.COMPONENTS.Monitor),   
+    componentList: joi.array().required(),   
+    currentTs: joi.string().optional(),
+
+  });
+  return joiSchema.validate(requestParams);
+};

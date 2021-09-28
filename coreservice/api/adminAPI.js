@@ -432,6 +432,76 @@ module.exports.GetAdminComponents = async (req, res) => {
   }
 };
 
+module.exports.DeleteAdminComponents = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+
+  logger.logInfo(`DeleteAdminComponents()`);
+
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.DELETEADMINCOMPONENTS,
+    null,
+    res,
+    logger
+  );
+
+  var deleteAdminComponentsRequest = new coreRequestModel.DeleteAdminComponentsRequest(req);
+  
+    logger.logInfo(
+      `DeleteAdminComponents() :: Request Object : ${deleteAdminComponentsRequest}`
+    );
+  
+    var validateRequest = joiValidationModel.deleteAdminCompenentRequest(
+      deleteAdminComponentsRequest
+    );
+  
+    if (validateRequest.error) {
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.Invalid_Request,
+        constant.ErrorCode.Invalid_Request,
+        validateRequest.error.details
+      );
+      logger.logInfo(
+        `DeleteAdminComponents() Error:: Invalid Request :: ${JSON.stringify(
+          deleteAdminComponentsRequest
+        )}`
+      );
+      deleteAdminComponentsResponse(functionContext, null);
+      return;
+    }
+
+  try {
+ 
+     var deleteAdminComponentsResult = await databaseHelper.deleteAdminComponentListInDB(
+      functionContext,
+      deleteAdminComponentsRequest
+    );
+  
+
+    await deleteAdminComponentsResponse(functionContext, deleteAdminComponentsResult);
+  } catch (errDeleteAdminComponenets) {
+    if (
+      !errDeleteAdminComponenets.ErrorMessage &&
+      !errDeleteAdminComponenets.ErrorCode
+    ) {
+      logger.logInfo(
+        `errPlaceDelivery() :: Error :: ${errDeleteAdminComponenets}`
+      );
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.ApplicationError,
+        constant.ErrorCode.ApplicationError,
+        JSON.stringify(errDeleteAdminComponenets)
+      );
+    }
+    logger.logInfo(
+      `DeleteAdminComponents() :: Error :: ${JSON.stringify(
+        errDeleteAdminComponenets
+      )}`
+    );
+    deleteAdminComponentsResponse(functionContext, null);
+  }
+};
+
   
 
 var saveSystemUserResponse = (functionContext, resolvedResult) => {
@@ -487,6 +557,8 @@ var processMedia=async (functionContext,req,requestContext)=>{
 
       for (let count = 0; count < req.files.length; count++) {
         var file =  req.files[count];
+        console.log(file);
+        logger.logInfo(`Media Files() invoked ${JSON.stringify(req.files[count])}`);
 
         if (file.hasOwnProperty("filename")||file.hasOwnProperty("fileName")) {
           if (file.filename) {
@@ -601,6 +673,32 @@ var getAdminComponentsResponse = async (functionContext, resolvedResult) => {
     `getAdminComponentsResponse  Response :: ${JSON.stringify(getAdminComponentsResponse)}`
   );
   logger.logInfo(`getAdminComponentsResponse completed`);
+};
+
+var deleteAdminComponentsResponse = async (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+
+  logger.logInfo(`deleteAdminComponentsResponse() invoked`);
+
+  var deleteAdminComponentsResponse = new coreRequestModel.DeleteAdminComponentsResponse();
+
+  deleteAdminComponentsResponse.RequestID = functionContext.requestID;
+  if (functionContext.error) {
+    deleteAdminComponentsResponse.Error = functionContext.error;
+    deleteAdminComponentsResponse.Details = null;
+  } else {
+
+     
+      deleteAdminComponentsResponse.Error = null;
+      deleteAdminComponentsResponse.Details.IsDeleted =true;
+
+  }
+  appLib.SendHttpResponse(functionContext, deleteAdminComponentsResponse);
+
+  logger.logInfo(
+    `deleteAdminComponentsResponse  Response :: ${JSON.stringify(deleteAdminComponentsResponse)}`
+  );
+  logger.logInfo(`deleteAdminComponentsResponse completed`);
 };
 
 var savePlaylistResponse = async (functionContext, resolvedResult) => {
