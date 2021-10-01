@@ -538,9 +538,9 @@ module.exports.getAdminComponentListInDB = async (
       `CALL usp_get_admin_components('${functionContext.userRef}','${resolvedResult.componentType}')`);
 
     logger.logInfo(`getAdminComponentListInDB() :: Data Saved Successfully${JSON.stringify(
-        result[0][0]
+        result[0]
       )}`);
-    return result[0][0];
+    return result[0];
   
   } catch (errSaveDeliveryDetailsInDB) {
     logger.logInfo(

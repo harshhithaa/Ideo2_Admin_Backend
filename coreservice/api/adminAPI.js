@@ -406,9 +406,11 @@ module.exports.GetAdminComponents = async (req, res) => {
       functionContext,
       getAdminComponentsRequest
     );
+
+    var processComponentListDataResult= await processComponentListData(functionContext,getAdminComponentsRequest,adminComponentsResult)
   
 
-    await getAdminComponentsResponse(functionContext, adminComponentsResult);
+    await getAdminComponentsResponse(functionContext, processComponentListDataResult);
   } catch (errGetAdminComponents) {
     if (
       !errGetAdminComponents.ErrorMessage &&
@@ -728,17 +730,8 @@ var getAdminComponentsResponse = async (functionContext, resolvedResult) => {
     getAdminComponentsResponse.Error = functionContext.error;
     getAdminComponentsResponse.Details = null;
   } else {
-   
-      let componentList=[]
-  
-      resolvedResult.forEach(element => {
-        componentList.push(element)
-      });
-  
-    
-     
       getAdminComponentsResponse.Error = null;
-      getAdminComponentsResponse.Details.ComponentList =componentList;
+      getAdminComponentsResponse.Details.ComponentList =resolvedResult.ComponentList;
 
   }
   appLib.SendHttpResponse(functionContext, getAdminComponentsResponse);
@@ -914,3 +907,57 @@ var getAdminComponentsDetailsResponse = async (functionContext, resolvedResult) 
   );
   logger.logInfo(`getAdminComponentsDetailsResponse completed`);
 };
+
+var processComponentListData= async (functionContext,requestDetails,resolvedResult)=>{
+  var logger=functionContext.logger;
+  logger.logInfo(`processComponentListData() invoked`);
+
+  var details={}
+  var resolvedData={}
+  var Media=[];
+
+  if (resolvedResult) {
+    if (requestDetails.componentType==constant.COMPONENTS.Media) {
+      resolvedData.ComponentList=resolvedResult[0]; 
+      details={
+        ...resolvedData
+      } 
+      
+      
+    } else if (requestDetails.componentType==constant.COMPONENTS.Playlist) {
+      resolvedData.ComponentList=resolvedResult[0];
+      resolvedData.Media=resolvedResult[1];
+
+      resolvedData.ComponentList.forEach(item => {
+       Media= appLib.FilterArray(resolvedData.Media,item.Id,'PlaylistId');
+       item.Media=Media;
+      });
+      details={
+        ...resolvedData
+      } 
+      
+    } else if (requestDetails.componentType==constant.COMPONENTS.Schedule) {
+      resolvedData.ComponentList=resolvedResult[0];
+      resolvedData.MonitorData=resolvedResult[1];
+      details={
+        ...resolvedData
+      } 
+
+      
+    } else if (requestDetails.componentType==constant.COMPONENTS.Monitor) {
+      resolvedData.ComponentList=resolvedResult[0];
+      details={
+        ...resolvedData
+      } 
+
+    } 
+    
+
+    
+  }
+
+  return {
+    ComponentList:details.ComponentList
+  };
+
+}
