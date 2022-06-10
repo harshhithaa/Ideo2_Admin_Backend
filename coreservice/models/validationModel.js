@@ -110,7 +110,7 @@ module.exports.saveMonitorRequest = (requestParams) => {
     scheduleRef: joi.string().optional().allow(null),
     isActive: joi.number().required(),
     currentTs: joi.string().optional(),
-
+    orientation: joi.number().required()
   });
   return joiSchema.validate(requestParams);
 };

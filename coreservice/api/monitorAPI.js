@@ -145,9 +145,11 @@ module.exports.AdminLogout = async (req, res) => {
       );
 
       let processScheduleDetailsResult= await processScheduleDetails(functionContext,fetchMonitorDetailsResult);
+
+      let orientation = await getOrientation(functionContext,fetchMonitorDetailsResult);
+      
   
-  
-      fetchMonitorDetailsResponse(functionContext, processScheduleDetailsResult);
+      fetchMonitorDetailsResponse(functionContext, processScheduleDetailsResult, orientation);
     } catch (errMonitorDetails) {
       if (!errMonitorDetails.ErrorMessage && !errMonitorDetails.ErrorCode) {
         logger.logInfo(`fetchMonitorDetailsResponse() :: Error :: ${errMonitorDetails}`);
@@ -157,7 +159,7 @@ module.exports.AdminLogout = async (req, res) => {
         );
       }
       logger.logInfo(`fetchMonitorDetailsResponse() :: Error :: ${JSON.stringify(errMonitorDetails)}`);
-      fetchMonitorDetailsResponse(functionContext, null);
+      fetchMonitorDetailsResponse(functionContext, null,null);
     }
   };
 
@@ -265,7 +267,7 @@ module.exports.AdminLogout = async (req, res) => {
     logger.logInfo(`saveMonitorLoginResponse completed`);
   };
 
-  var fetchMonitorDetailsResponse = (functionContext, resolvedResult) => {
+  var fetchMonitorDetailsResponse = (functionContext, resolvedResult,orientation) => {
     var logger = functionContext.logger;
   
     logger.logInfo(`fetchMonitorDetailsResponse() invoked`);
@@ -278,7 +280,7 @@ module.exports.AdminLogout = async (req, res) => {
       MonitorDetailsResponse.Details = null;
     } else {
       MonitorDetailsResponse.Error = null;
-
+      MonitorDetailsResponse.Details.Orientation = orientation;
       MonitorDetailsResponse.Details.MediaList = resolvedResult;
       // MonitorDetailsResponse.Details.ScheduleDetails = resolvedResult[2] ? resolvedResult[2][0] :null;
   
@@ -314,7 +316,6 @@ module.exports.AdminLogout = async (req, res) => {
       
     }else{
       var defaultPlaylist=resolvedResult[1]?resolvedResult[1]:[];
-
       finalPlaylist=defaultPlaylist;
 
     }
@@ -334,5 +335,10 @@ module.exports.AdminLogout = async (req, res) => {
 
   }
 
+  var getOrientation = (functionContext, resolvedResult)=>{
+    var logger = functionContext.logger;
   
+    logger.logInfo(`getOrientation() invoked`);
 
+    return resolvedResult[0][0].Orientation;
+  }
