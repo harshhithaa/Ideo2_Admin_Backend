@@ -176,6 +176,7 @@ class saveMonitorRequest {
     this.scheduleRef = req.body.ScheduleRef ? req.body.ScheduleRef : null;
     this.isActive = req.body.IsActive ? req.body.IsActive : null;
     this.orientation = req.body.Orientation ? req.body.Orientation : null;
+    this.slideTime = req.body.SlideTime ? req.body.SlideTime : null;
     this.currentTs = momentTimezone
       .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
       .tz("Asia/Kolkata")

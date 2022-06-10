@@ -147,9 +147,11 @@ module.exports.AdminLogout = async (req, res) => {
       let processScheduleDetailsResult= await processScheduleDetails(functionContext,fetchMonitorDetailsResult);
 
       let orientation = await getOrientation(functionContext,fetchMonitorDetailsResult);
+
+      let slideTime = await getSlideTime(functionContext,fetchMonitorDetailsResult);
       
   
-      fetchMonitorDetailsResponse(functionContext, processScheduleDetailsResult, orientation);
+      fetchMonitorDetailsResponse(functionContext, processScheduleDetailsResult, orientation, slideTime);
     } catch (errMonitorDetails) {
       if (!errMonitorDetails.ErrorMessage && !errMonitorDetails.ErrorCode) {
         logger.logInfo(`fetchMonitorDetailsResponse() :: Error :: ${errMonitorDetails}`);
@@ -267,7 +269,7 @@ module.exports.AdminLogout = async (req, res) => {
     logger.logInfo(`saveMonitorLoginResponse completed`);
   };
 
-  var fetchMonitorDetailsResponse = (functionContext, resolvedResult,orientation) => {
+  var fetchMonitorDetailsResponse = (functionContext, resolvedResult,orientation,slideTime) => {
     var logger = functionContext.logger;
   
     logger.logInfo(`fetchMonitorDetailsResponse() invoked`);
@@ -282,9 +284,9 @@ module.exports.AdminLogout = async (req, res) => {
       MonitorDetailsResponse.Error = null;
       MonitorDetailsResponse.Details.Orientation = orientation;
       MonitorDetailsResponse.Details.MediaList = resolvedResult;
+      MonitorDetailsResponse.Details.SlideTime = slideTime;
       // MonitorDetailsResponse.Details.ScheduleDetails = resolvedResult[2] ? resolvedResult[2][0] :null;
-  
-    
+
       
     }
     appLib.SendHttpResponse(functionContext, MonitorDetailsResponse);
@@ -341,4 +343,12 @@ module.exports.AdminLogout = async (req, res) => {
     logger.logInfo(`getOrientation() invoked`);
 
     return resolvedResult[0][0].Orientation;
+  }
+
+  var getSlideTime = (functionContext, resolvedResult)=>{
+    var logger = functionContext.logger;
+  
+    logger.logInfo(`getSlideTime() invoked`);
+
+    return resolvedResult[0][0].SlideTime;
   }
