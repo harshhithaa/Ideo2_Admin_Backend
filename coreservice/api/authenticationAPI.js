@@ -1,5 +1,5 @@
 var databaseHelper = require("../helper/databasehelper");
-var coreRequestModel = require("../models/coreserviceModel");
+var coreRequestModel = require("../models/coreServiceModel");
 var constant = require("../common/constant");
 var requestType = constant.RequestType;
 var appLib = require("applib");

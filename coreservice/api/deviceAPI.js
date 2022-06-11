@@ -1,5 +1,5 @@
 var databaseHelper = require("../helper/databasehelper");
-var coreRequestModel = require("../models/coreserviceModel");
+var coreRequestModel = require("../models/coreServiceModel");
 var constant = require("../common/constant");
 var joiValidationModel = require("../models/validationModel");
 var requestType = constant.RequestType;
@@ -25,9 +25,8 @@ module.exports.registerDeviceToken = async (req, res) => {
       .format("YYYY-MM-DD HH:mm:ss.SSS"),
   };
 
-  var registerDeviceTokenRequest = new coreRequestModel.RegisterDeviceTokenRequest(
-    req
-  );
+  var registerDeviceTokenRequest =
+    new coreRequestModel.RegisterDeviceTokenRequest(req);
   logger.logInfo(
     `registerDeviceToken() :: Request Object : ${registerDeviceTokenRequest}`
   );
@@ -51,10 +50,11 @@ module.exports.registerDeviceToken = async (req, res) => {
     return;
   }
   try {
-    let registerDeviceTokenDBResult = await databaseHelper.registerDeviceTokenInDB(
-      functionContext,
-      registerDeviceTokenRequest
-    );
+    let registerDeviceTokenDBResult =
+      await databaseHelper.registerDeviceTokenInDB(
+        functionContext,
+        registerDeviceTokenRequest
+      );
     registerDeviceTokenResponse(functionContext, registerDeviceTokenDBResult);
   } catch (errRegisterDeviceToken) {
     if (
@@ -84,7 +84,8 @@ var registerDeviceTokenResponse = (functionContext, resolvedResult) => {
 
   logger.logInfo(`registerDeviceTokenResponse() invoked`);
 
-  var registerDeviceTokenResponse = new coreRequestModel.RegisterDeviceTokenResponse();
+  var registerDeviceTokenResponse =
+    new coreRequestModel.RegisterDeviceTokenResponse();
 
   registerDeviceTokenResponse.RequestID = functionContext.requestID;
   if (functionContext.error) {
@@ -102,4 +103,3 @@ var registerDeviceTokenResponse = (functionContext, resolvedResult) => {
   );
   logger.logInfo(`registerDeviceTokenResponse completed`);
 };
-
