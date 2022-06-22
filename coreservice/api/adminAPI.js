@@ -687,7 +687,6 @@ var processMedia = async (functionContext, req, requestContext) => {
         logger.logInfo(
           `Media Files() invoked ${JSON.stringify(req.files[count])}`
         );
-
         if (
           file.hasOwnProperty("filename") ||
           file.hasOwnProperty("fileName")
@@ -755,7 +754,7 @@ async function fileUpload(functionContext, fileDetails) {
   const client = new ftp.Client();
   client.ftp.verbose = true;
   try {
-    await client.access();
+    await client.access(FTPSettings);
     for (let file = 0; file < fileDetails.length; file++) {
       const element = fileDetails[file];
       await client.uploadFrom(element.srcPath, element.destPath);
