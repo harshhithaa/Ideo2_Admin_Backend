@@ -9,9 +9,9 @@ var joiValidationModel = require("../models/validationModel");
 var FTPSettings = require("../common/settings").FTPSettings;
 var fileConfiguration = require("../common/settings").FileConfiguration;
 var ftp = require("basic-ftp");
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-var ffmpeg = require('fluent-ffmpeg')
-var fs = require('fs');
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+var ffmpeg = require("fluent-ffmpeg");
+var fs = require("fs");
 
 module.exports.SaveSystemUser = async (req, res) => {
   var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
@@ -690,42 +690,46 @@ var processMedia = async (functionContext, req, requestContext) => {
         logger.logInfo(
           `Media Files() invoked ${JSON.stringify(req.files[count])}`
         );
-        if(file.mimetype === 'video/mp4'){
-          await processVideo(file)
+        if (file.mimetype === "video/mp4") {
+          await processVideo(file);
         }
         if (
           file.hasOwnProperty("filename") ||
           file.hasOwnProperty("fileName")
         ) {
           if (file.filename) {
-            if(file.mimetype === 'video/mp4'){
-              console.log("file path",`./uploads/${file.filename}`)
-              fs.unlink(`./uploads/${file.filename}`,()=>{
-                console.log('File Removed')
-              })
+            if (file.mimetype === "video/mp4") {
+              console.log("file path", `./uploads/${file.filename}`);
+              fs.unlink(`./uploads/${file.filename}`, () => {
+                console.log("File Removed");
+              });
               requestContext.file.fileName = file.originalname
-              ? file.originalname
-              : file.originalname;
-            requestContext.file.fileMimetype = file.mimetype;
-            requestContext.file.srcPath =
-              fileConfiguration.LocalStorage + file.originalname;
-            requestContext.file.destPath =
-              fileConfiguration.RemoteStorage + new Date().toDateString() + file.originalname;
-            requestContext.file.fileUrl =
-              fileConfiguration.FileUrl + new Date().toDateString() + file.originalname;
-            }else{
-            requestContext.file.fileName = file.originalname
-              ? file.originalname
-              : file.originalname;
-            requestContext.file.fileMimetype = file.mimetype;
-            requestContext.file.srcPath =
-              fileConfiguration.LocalStorage + file.filename;
-            requestContext.file.destPath =
-              fileConfiguration.RemoteStorage + file.filename;
-            requestContext.file.fileUrl =
-              fileConfiguration.FileUrl + file.filename;
+                ? file.originalname
+                : file.originalname;
+              requestContext.file.fileMimetype = file.mimetype;
+              requestContext.file.srcPath =
+                fileConfiguration.LocalStorage + file.originalname;
+              requestContext.file.destPath =
+                fileConfiguration.RemoteStorage +
+                new Date().toDateString() +
+                file.originalname;
+              requestContext.file.fileUrl =
+                fileConfiguration.FileUrl +
+                new Date().toDateString() +
+                file.originalname;
+            } else {
+              requestContext.file.fileName = file.originalname
+                ? file.originalname
+                : file.originalname;
+              requestContext.file.fileMimetype = file.mimetype;
+              requestContext.file.srcPath =
+                fileConfiguration.LocalStorage + file.filename;
+              requestContext.file.destPath =
+                fileConfiguration.RemoteStorage + file.filename;
+              requestContext.file.fileUrl =
+                fileConfiguration.FileUrl + file.filename;
+            }
           }
-        }
         }
         requestContext.serverUploadDetails.push({
           srcPath: requestContext.file.srcPath,
@@ -1084,33 +1088,34 @@ var processComponentListData = async (
   };
 };
 
-var baseName = (str)=>{
-  var base = new String(str).substring(str.lastIndexOf('/') + 1);
-  if(base.lastIndexOf(".") != -1) {
+var baseName = (str) => {
+  var base = new String(str).substring(str.lastIndexOf("/") + 1);
+  if (base.lastIndexOf(".") != -1) {
     base = base.substring(0, base.lastIndexOf("."));
-    }    
+  }
   return base;
-} 
+};
 
-var processVideo = async (video)=>{
-  return new Promise((resolve,reject)=>{
-  var basename = baseName(video.originalname);
+var processVideo = async (video) => {
+  return new Promise((resolve, reject) => {
+    var basename = baseName(video.originalname);
 
-  ffmpeg.setFfmpegPath(ffmpegPath);
+    ffmpeg.setFfmpegPath(ffmpegPath);
 
-  ffmpeg(video.path)
-  .videoCodec('libx265')
-  .withSize('70%')
-  .on('error', function(err) {
-    console.log('An error occurred: ' + err.message);
-    reject(err)
-  })
-  .on('progress', function(progress) {
-    console.log('... frames: ' + progress.frames);})
-  .on('end', function() {
-      console.log('Finished processing');
-      resolve();
-    })
-  .save(`./uploads/${basename}.mp4`)
-  })
-}
+    ffmpeg(video.path)
+      .videoCodec("libx265")
+      .withSize("70%")
+      .on("error", function (err) {
+        console.log("An error occurred: " + err.message);
+        reject(err);
+      })
+      .on("progress", function (progress) {
+        console.log("... frames: " + progress.frames);
+      })
+      .on("end", function () {
+        console.log("Finished processing");
+        resolve();
+      })
+      .save(`./uploads/${basename}.mp4`);
+  });
+};
