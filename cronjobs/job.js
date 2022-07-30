@@ -2,10 +2,9 @@
 var CronJob = require('cron').CronJob;
 var fs=require('fs');
 var unlink=require('fs').unlink
-var icmp = require('icmp')
 var nodemailer = require("nodemailer");
 
-async function sendEmail() {
+async function sendEmail(path) {
   // create reusable transporter object using the default SMTP transport
   let transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -13,15 +12,19 @@ async function sendEmail() {
     secure: false, // true for 465, false for other ports
     auth: {
       user: 'coppercodes@gmail.com',
-      pass: '(cztYm8tm8aq3;EZ',
+      pass: 'bssqnoesujmbyaru',
     },
   });
 
     let info = await transporter.sendMail({
-    from: 'akshay.shirwaikar@gmail.com', // sender address
-    to: 'akshay.shirwaikar@gmail.com', // list of receivers
-    subject: "Ideogram", // Subject line
-    text: "Something is wrong. Please check", // plain text body
+    from: 'coppercodes@gmail.com', // sender address
+    to: 'akshay.shirwaikar@gmail.com, coppercodes@gmail.com', // list of receivers
+    subject: "Ideogram Log Files", // Subject line,
+    text: "PFA Log Files", // plain text body
+    attachments:[{
+      filename: 'Logs.zip',
+      path: path
+    }]
   });
 
   console.log("Message sent: %s", info.messageId);
@@ -29,17 +32,12 @@ async function sendEmail() {
   console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
 }
 
-var job1 = new CronJob('0 0 */28 * *', function() {
+const JSZip = require('jszip');
 
-  // ping to a host
-  // icmp.send('139.59.80.152', "Hey, I'm sending a message!")
-  //   .then(obj => {
-  //       console.log(obj.open ? 'Done' : 'Failed')
-  //   })
-  //   .catch(err => console.log(err));
+var job = new CronJob('0 0 */28 * *', function() {
+  const zip = new JSZip();
 
-
-
+  try{
   const testFolder = '../coreservice/Logs/';
   const testFiles = testFolder+fs.readdirSync(testFolder);
 
@@ -47,25 +45,30 @@ var job1 = new CronJob('0 0 */28 * *', function() {
 
   for(var i=0; i<logFiles.length;i++){
     directoryLength=fs.readdirSync(testFolder).length
-    console.log('currentFile',logFiles[i]);
     if(i==0){
+      directoryLength>0?zip.file(`${logFiles[i].split('/')[3]}`,fs.readFileSync(logFiles[i])):null
       directoryLength>0?removeAFile(logFiles[i]):null
     }else{
-      directoryLength>7?removeAFile(testFolder+logFiles[i]):null 
+      directoryLength>1?zip.file(`${logFiles[i]}`,fs.readFileSync(testFolder+logFiles[i])):null
+      directoryLength>1?removeAFile(testFolder+logFiles[i]):null 
     }
   }
-  
+
+  zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true })
+  .pipe(fs.createWriteStream(testFolder+'Logs.zip'))
+  .on('finish', function () {
+      console.log("Logs.zip written.");
+  });
+
+  sendEmail(testFolder+'Logs.zip').catch(console.error)
+
+  }catch(err){
+    console.log(err)
+  }
 }, null, true, 'Asia/Kolkata');
 
-var job2 = new CronJob('* * * * *',()=>{
-  icmp.ping('139.59.80.1',2000)
-  .then(obj => {console.log(obj.open ? 'Chalta' : sendEmail().catch(console.error))})
-  .catch(err=>console.log(err))
 
-}, null, true, 'Asia/Kolkata')
-
-job1.start();
-job2.start();
+job.start();
 
 
 var removeAFile=(path)=>{
@@ -74,6 +77,5 @@ var removeAFile=(path)=>{
     if (err) throw err;
     console.log(`${path} was removed`);
   });
-
 
 }
