@@ -343,17 +343,41 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
   day = day.toString();
 
   console.log(day);
+  // console.log(resolvedResult.slice(-2)[0]);
 
-  if (resolvedResult.length == 5) {
-    var scheduledPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
-    var scheduleDetails = resolvedResult[2] ? resolvedResult[2][0] : [];
-    var defaultPlaylist = resolvedResult[3] ? resolvedResult[3] : [];
+  for (let i = 0; i < resolvedResult.length; i++) {
+    if (
+      resolvedResult[i][0] &&
+      resolvedResult[i][0].hasOwnProperty("ScheduleRef")
+    ) {
+      var scheduledPlaylist = resolvedResult[i - 1]
+        ? resolvedResult[i - 1]
+        : [];
+      var scheduleDetails = resolvedResult[i][0] ? resolvedResult[i][0] : [];
+      var defaultPlaylist = resolvedResult.slice(-2)[0]
+        ? resolvedResult.slice(-2)[0]
+        : [];
 
-    var days = JSON.parse(scheduleDetails.Days);
-  } else {
-    var defaultPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
-    finalPlaylist = defaultPlaylist;
+      var days = JSON.parse(scheduleDetails.Days);
+      break;
+    } else {
+      var defaultPlaylist = resolvedResult.slice(-2)[0]
+        ? resolvedResult.slice(-2)[0]
+        : [];
+      finalPlaylist = defaultPlaylist;
+    }
   }
+
+  // if (resolvedResult.length == 5) {
+  //   var scheduledPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
+  //   var scheduleDetails = resolvedResult[2] ? resolvedResult[2][0] : [];
+  //   var defaultPlaylist = resolvedResult[3] ? resolvedResult[3] : [];
+
+  //   var days = JSON.parse(scheduleDetails.Days);
+  // } else {
+  //   var defaultPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
+  //   finalPlaylist = defaultPlaylist;
+  // }
 
   if (days && days.length > 0) {
     finalPlaylist = days.includes(day) ? scheduledPlaylist : defaultPlaylist;
