@@ -66,15 +66,15 @@ class isAdminPresentRequest {
 }
 
 class isAdminPresentResponse {
-      constructor() {
-        this.Details = {
-          CustomerRef: null,
-          VerificationStatus: null,
-          AuthToken: null,
-        };
-        (this.RequestID = null), (this.Error = null);
-      }
-    }
+  constructor() {
+    this.Details = {
+      CustomerRef: null,
+      VerificationStatus: null,
+      AuthToken: null,
+    };
+    (this.RequestID = null), (this.Error = null);
+  }
+}
 
 class adminLoginRequest {
   constructor(req) {
@@ -89,7 +89,7 @@ class adminLoginResponse {
       (this.Details = {
         AuthToken: null,
         UserRef: null,
-        UserType: null
+        UserType: null,
       }),
       (this.RequestID = null);
   }
@@ -124,7 +124,9 @@ class saveSystemUserResponse {
 
 class getAdminComponentRequest {
   constructor(req) {
-    this.componentType = req.query.componenttype ? req.query.componenttype : null;
+    this.componentType = req.query.componenttype
+      ? req.query.componenttype
+      : null;
   }
 }
 
@@ -172,8 +174,10 @@ class saveMonitorRequest {
     this.monitorRef = req.body.MonitorRef ? req.body.MonitorRef : null;
     this.monitorName = req.body.MonitorName ? req.body.MonitorName : null;
     this.description = req.body.Description ? req.body.Description : null;
-    this.defaultPlaylistRef = req.body.DefaultPlaylistRef ? req.body.DefaultPlaylistRef : null;
-    this.scheduleRef = req.body.ScheduleRef ? req.body.ScheduleRef : null;
+    this.defaultPlaylistRef = req.body.DefaultPlaylistRef
+      ? req.body.DefaultPlaylistRef
+      : null;
+    this.schedules = req.body.Schedules ? req.body.Schedules : null;
     this.isActive = req.body.IsActive ? req.body.IsActive : null;
     this.orientation = req.body.Orientation ? req.body.Orientation : null;
     this.slideTime = req.body.SlideTime ? req.body.SlideTime : null;
@@ -186,9 +190,7 @@ class saveMonitorRequest {
 
 class saveMonitorResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {}),
-      (this.RequestID = null);
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 
@@ -224,7 +226,9 @@ class saveScheduleRequest {
     this.playlistRef = req.body.PlaylistRef ? req.body.PlaylistRef : null;
     this.monitorRef = req.body.MonitorRef ? req.body.MonitorRef : null;
     this.schedule = req.body.Schedule ? req.body.Schedule : null;
-    this.fixedTimePlayback = req.body.FixedTimePlayback ? req.body.FixedTimePlayback : 0;
+    this.fixedTimePlayback = req.body.FixedTimePlayback
+      ? req.body.FixedTimePlayback
+      : 0;
     this.isActive = req.body.IsActive ? req.body.IsActive : null;
     this.currentTs = momentTimezone
       .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
@@ -234,10 +238,7 @@ class saveScheduleRequest {
 }
 class saveScheduleResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {
-      }),
-      (this.RequestID = null);
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 
@@ -256,7 +257,7 @@ class deleteAdminComponentsResponse {
   constructor() {
     (this.Error = null),
       (this.Details = {
-        IsDeleted:false
+        IsDeleted: false,
       }),
       (this.RequestID = null);
   }
@@ -275,9 +276,7 @@ class validateDeleteAdminComponentsRequest {
 
 class validateDeleteAdminComponentsResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {}),
-      (this.RequestID = null);
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 
@@ -289,23 +288,20 @@ class monitorDetailsRequest {
 
 class monitorDetailsResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {}),
-      (this.RequestID = null);
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 
 class monitorLoginRequest {
   constructor(req) {
     this.monitorUser = req.body.MonitorUser ? req.body.MonitorUser : null;
-    this.password = req.body.Password ? req.body.Password : null;  }
+    this.password = req.body.Password ? req.body.Password : null;
+  }
 }
 
 class monitorLoginResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {}),
-      (this.RequestID = null);
+    (this.Error = null), (this.Details = {}), (this.RequestID = null);
   }
 }
 
@@ -324,8 +320,10 @@ module.exports.SaveMediaRequest = saveMediaRequest;
 module.exports.SaveMediaResponse = saveMediaResponse;
 module.exports.GetAdminComponentRequest = getAdminComponentRequest;
 module.exports.GetAdminComponentResponse = getAdminComponentResponse;
-module.exports.GetAdminComponentDetailsRequest = getAdminComponentDetailsRequest;
-module.exports.GetAdminComponentDetailsResponse = getAdminComponentDetailsResponse;
+module.exports.GetAdminComponentDetailsRequest =
+  getAdminComponentDetailsRequest;
+module.exports.GetAdminComponentDetailsResponse =
+  getAdminComponentDetailsResponse;
 module.exports.SavePlaylistRequest = savePlaylistRequest;
 module.exports.SavePlaylistResponse = savePlaylistResponse;
 module.exports.SaveScheduleRequest = saveScheduleRequest;
@@ -334,13 +332,12 @@ module.exports.SaveMonitorRequest = saveMonitorRequest;
 module.exports.SaveMonitorResponse = saveMonitorResponse;
 module.exports.DeleteAdminComponentsRequest = deleteAdminComponentsRequest;
 module.exports.DeleteAdminComponentsResponse = deleteAdminComponentsResponse;
-module.exports.ValidateDeleteAdminComponentsRequest = validateDeleteAdminComponentsRequest;
-module.exports.ValidateDeleteAdminComponentsResponse = validateDeleteAdminComponentsResponse;
+module.exports.ValidateDeleteAdminComponentsRequest =
+  validateDeleteAdminComponentsRequest;
+module.exports.ValidateDeleteAdminComponentsResponse =
+  validateDeleteAdminComponentsResponse;
 module.exports.AdminLogoutResponse = adminLogoutResponse;
 module.exports.MonitorDetailsRequest = monitorDetailsRequest;
 module.exports.MonitorDetailsResponse = monitorDetailsResponse;
 module.exports.MonitorLoginRequest = monitorLoginRequest;
 module.exports.MonitorLoginResponse = monitorLoginResponse;
-
-
-

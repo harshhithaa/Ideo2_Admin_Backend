@@ -113,7 +113,14 @@ module.exports.saveMonitorRequest = (requestParams) => {
     monitorName: joi.string().required(),
     description: joi.string().optional().allow(null),
     defaultPlaylistRef: joi.string().required().allow(null),
-    scheduleRef: joi.string().optional().allow(null),
+    schedules: joi
+      .array()
+      .items({
+        ScheduleRef: joi.string().required(),
+        IsActive: joi.number().required().allow(1, 0),
+      })
+      .optional()
+      .allow(null),
     isActive: joi.number().required(),
     currentTs: joi.string().optional(),
     orientation: joi.string().required(),
