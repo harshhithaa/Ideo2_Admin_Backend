@@ -9,8 +9,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "applib": "file:../applib/applib-1.0.0.tgz",
     "fs": "0.0.1-security",
     "jszip": "^3.10.0",
+    "moment-timezone": "^0.5.41",
+    "node-cron": "^3.0.2",
     "nodemailer": "^6.7.5",
     "nodemon": "^2.0.15"
   }
