@@ -40,7 +40,7 @@ var momentTimezone = require("moment-timezone");
 
 // const JSZip = require("jszip");
 
-cron.schedule("0 0 */10 * *", () => {
+cron.schedule("* * * * *", () => {
   deleteLogs(logger);
 });
 
@@ -59,21 +59,23 @@ const deleteLogs = () => {
   // const zip = new JSZip();
 
   try {
-    const testFolder = "../coreservice/Logs/";
+    const testFolder = "/root/IdeogramBE_prod/coreservice/Logs/";
     const testFiles = testFolder + fs.readdirSync(testFolder);
 
-    const logFiles = testFiles.split(",");
+    logger.logInfo(`Inside Test folder ${testFolder}`);
 
-    for (var i = 0; i < logFiles.length; i++) {
-      directoryLength = fs.readdirSync(testFolder).length;
-      if (i == 0) {
-        // directoryLength>0?zip.file(`${logFiles[i].split('/')[3]}`,fs.readFileSync(logFiles[i])):null
-        directoryLength > 0 ? removeAFile(logFiles[i]) : null;
-      } else {
-        // directoryLength>1?zip.file(`${logFiles[i]}`,fs.readFileSync(testFolder+logFiles[i])):null
-        directoryLength > 1 ? removeAFile(testFolder + logFiles[i]) : null;
-      }
-    }
+    // const logFiles = testFiles.split(",");
+
+    // for (var i = 0; i < logFiles.length; i++) {
+    //   directoryLength = fs.readdirSync(testFolder).length;
+    //   if (i == 0) {
+    //     // directoryLength>0?zip.file(`${logFiles[i].split('/')[3]}`,fs.readFileSync(logFiles[i])):null
+    //     directoryLength > 0 ? removeAFile(logFiles[i]) : null;
+    //   } else {
+    //     // directoryLength>1?zip.file(`${logFiles[i]}`,fs.readFileSync(testFolder+logFiles[i])):null
+    //     directoryLength > 1 ? removeAFile(testFolder + logFiles[i]) : null;
+    //   }
+    // }
 
     // zip
     //   .generateNodeStream({ type: "nodebuffer", streamFiles: true })
