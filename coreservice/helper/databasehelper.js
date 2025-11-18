@@ -217,7 +217,7 @@ module.exports.getAdminComponentsDB = async (
     functionContext.error = new coreRequestModel.ErrorModel(
       errorMessage,
       errorCode,
-      JSON.stringify(errSaveRestaurantItemDetailsDB)
+      JSON.stringify(errgetAdminComponentsDB)
     );
     throw functionContext.error;
   }
@@ -262,7 +262,7 @@ module.exports.getAdminComponentListInDB = async (
     functionContext.error = new coreRequestModel.ErrorModel(
       errorMessage,
       errorCode,
-      JSON.stringify(errSaveRestaurantItemDetailsDB)
+JSON.stringify(errSaveDeliveryDetailsInDB)
     );
     throw functionContext.error;
   }
@@ -308,7 +308,7 @@ module.exports.getAdminComponentDetailsInDB = async (
     functionContext.error = new coreRequestModel.ErrorModel(
       errorMessage,
       errorCode,
-      JSON.stringify(errSaveRestaurantItemDetailsDB)
+JSON.stringify(errGetAdminComponentsDetailsInDB)
     );
     throw functionContext.error;
   }
@@ -406,7 +406,7 @@ module.exports.deleteAdminComponentListInDB = async (
     functionContext.error = new coreRequestModel.ErrorModel(
       errorMessage,
       errorCode,
-      JSON.stringify(errSaveRestaurantItemDetailsDB)
+JSON.stringify(errdeleteAdminComponentListInDB)
     );
     throw functionContext.error;
   }

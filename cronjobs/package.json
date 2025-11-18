@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "applib": "file:../applib/applib-1.0.0.tgz",
+    "applib": "file:../applib",
     "fs": "0.0.1-security",
     "moment-timezone": "^0.5.41",
     "node-cron": "^3.0.2",
