@@ -197,11 +197,12 @@ class saveMonitorResponse {
 
 class savePlaylistRequest {
   constructor(req) {
-    this.playlistRef = req.body.PlaylistRef ? req.body.PlaylistRef : null;
-    this.playlistName = req.body.PlaylistName ? req.body.PlaylistName : null;
-    this.description = req.body.Description ? req.body.Description : null;
-    this.playlist = req.body.Playlist ? req.body.Playlist : null;
-    this.isActive = req.body.IsActive ? req.body.IsActive : null;
+    // Changed to read lowercase body keys (matches frontend and usp_save_playlist expectations)
+    this.playlistRef = req.body.playlistRef ? req.body.playlistRef : null;
+    this.playlistName = req.body.playlistName ? req.body.playlistName : null;
+    this.description = req.body.description ? req.body.description : null;
+    this.playlist = req.body.playlist ? req.body.playlist : null;
+    this.isActive = req.body.isActive ? req.body.isActive : null;
     this.currentTs = momentTimezone
       .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
       .tz("Asia/Kolkata")

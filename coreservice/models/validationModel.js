@@ -72,10 +72,13 @@ module.exports.savePlaylistRequest = (requestParams) => {
     isActive: joi.number().required(),
     playlist: joi
       .array()
-      .items({
-        MediaRef: joi.string().required(),
-        IsActive: joi.number().required().allow(1, 0),
-      })
+      .items(
+        joi.object({
+          MediaRef: joi.string().required(),
+          IsActive: joi.number().required().allow(1, 0),
+          Duration: joi.number().optional().allow(null).min(1).max(60),
+        })
+      )
       .optional()
       .allow(null),
     currentTs: joi.string().optional(),
@@ -218,12 +221,12 @@ module.exports.getAdminComponentWithPaginationRequest = (requestParams) => {
         constant.COMPONENTS.Schedule,
         constant.COMPONENTS.Monitor
       ),
-    searchText: joi.string().optional().allow('', null),
-    mediaType: joi.string().optional().valid('image', 'video', 'gif', null),
+    searchText: joi.string().optional().allow("", null),
+    mediaType: joi.string().optional().valid("image", "video", "gif", null),
     isActive: joi.number().optional().valid(0, 1, null),
     userId: joi.number().optional().allow(null),
     pageNumber: joi.number().optional().min(1).default(1),
-    pageSize: joi.number().optional().min(1).max(100).default(10)
+    pageSize: joi.number().optional().min(1).max(100).default(10),
   });
   return joiSchema.validate(requestParams);
 };

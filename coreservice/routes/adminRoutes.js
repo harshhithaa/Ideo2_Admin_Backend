@@ -10,6 +10,8 @@ router.post("/saveschedule", adminApi.SaveSchedule);
 router.post("/savemonitor", adminApi.SaveMonitor);
 router.get("/componentlist", adminApi.GetAdminComponents);
 router.get("/componentlistpaginated", adminApi.GetAdminComponentsWithPagination); // New route
+// Alias route for playlist UI to explicitly use paginated endpoint
+router.get("/componentlistforplaylist", adminApi.GetAdminComponentsWithPagination);
 router.post("/deletecomponentlist", adminApi.DeleteAdminComponents);
 router.post(
   "/validatedeletecomponentlist",
