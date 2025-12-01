@@ -372,18 +372,86 @@ module.exports.deleteAdminComponentListInDB = async (
   logger.logInfo("deleteAdminComponentListInDB() Invoked!");
 
   try {
+    // Log what we're trying to delete
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: ComponentType: ${resolvedResult.componentType}`
+    );
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: ComponentList: ${JSON.stringify(resolvedResult.componentList)}`
+    );
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: UserRef: ${functionContext.userRef}`
+    );
+
+    // Convert componentList to JSON string for the stored procedure
+    const componentListJson = JSON.stringify(resolvedResult.componentList);
+
+    // First, let's check what's actually in the schedules table for this ID
+    if (resolvedResult.componentType === 3) {
+      for (let scheduleId of resolvedResult.componentList) {
+        const checkQuery = `SELECT * FROM schedules WHERE Id = ${scheduleId}`;
+        logger.logInfo(`deleteAdminComponentListInDB() :: Check query: ${checkQuery}`);
+
+        const existingSchedule = await databaseModule.knex.raw(checkQuery);
+        logger.logInfo(
+          `deleteAdminComponentListInDB() :: Found schedule: ${JSON.stringify(existingSchedule[0])}`
+        );
+      }
+    }
+
+    // Now execute the stored procedure with the correct parameters
     let result = await databaseModule.knex.raw(
-      `CALL usp_delete_admin_components('${functionContext.userRef}','${
-        resolvedResult.componentType
-      }','${JSON.stringify(resolvedResult.componentList)}')`
+      `CALL usp_delete_admin_components(?, ?, ?)`,
+      [
+        functionContext.userRef,  // paramAdminRef
+        resolvedResult.componentType,  // paramComponentType
+        componentListJson  // paramComponentList as JSON string
+      ]
     );
 
     logger.logInfo(
-      `deleteAdminComponentListInDB() :: Data Saved Successfully${JSON.stringify(
-        result[0][0]
-      )}`
+      `deleteAdminComponentListInDB() :: SP Result: ${JSON.stringify(result[0])}`
     );
-    return result[0][0];
+
+    // Extract affected rows from the stored procedure result
+    let affectedRows = 0;
+    let processedCount = 0;
+    
+    if (result && result[0] && result[0][0]) {
+      affectedRows = result[0][0].affectedRows || 0;
+      processedCount = result[0][0].processedCount || 0;
+    }
+
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: Affected Rows: ${affectedRows}, Processed Count: ${processedCount}`
+    );
+
+    // Check if schedule still exists after deletion (for verification)
+    if (resolvedResult.componentType === 3) {
+      for (let scheduleId of resolvedResult.componentList) {
+        const afterCheckQuery = `SELECT * FROM schedules WHERE Id = ${scheduleId}`;
+        const afterCheck = await databaseModule.knex.raw(afterCheckQuery);
+        logger.logInfo(
+          `deleteAdminComponentListInDB() :: After deletion, schedule exists: ${JSON.stringify(afterCheck[0])}`
+        );
+        
+        // If schedule still exists after deletion, throw error
+        if (afterCheck[0] && afterCheck[0].length > 0) {
+          throw new Error(`Failed to delete schedule ID ${scheduleId} - Record still exists in database`);
+        }
+      }
+    }
+
+    logger.logInfo(
+      `deleteAdminComponentListInDB() :: Successfully deleted ${affectedRows} items`
+    );
+
+    return {
+      success: true,
+      affectedRows: affectedRows,
+      processedCount: processedCount
+    };
+
   } catch (errdeleteAdminComponentListInDB) {
     logger.logInfo(
       `deleteAdminComponentListInDB() :: Error :: ${JSON.stringify(
@@ -406,7 +474,7 @@ module.exports.deleteAdminComponentListInDB = async (
     functionContext.error = new coreRequestModel.ErrorModel(
       errorMessage,
       errorCode,
-      JSON.stringify(errdeleteAdminComponentListInDB)
+      errdeleteAdminComponentListInDB.message || JSON.stringify(errdeleteAdminComponentListInDB)
     );
     throw functionContext.error;
   }

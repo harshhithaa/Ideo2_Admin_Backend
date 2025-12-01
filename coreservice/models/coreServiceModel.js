@@ -255,11 +255,13 @@ class deleteAdminComponentsRequest {
 
 class deleteAdminComponentsResponse {
   constructor() {
-    (this.Error = null),
-      (this.Details = {
-        IsDeleted: false,
-      }),
-      (this.RequestID = null);
+    this.Error = null;
+    this.Details = {
+      IsDeleted: false,
+      DeletedCount: 0,
+      ProcessedCount: 0
+    };
+    this.RequestID = null;
   }
 }
 

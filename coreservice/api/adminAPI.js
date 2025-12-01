@@ -986,7 +986,21 @@ var deleteAdminComponentsResponse = async (functionContext, resolvedResult) => {
     deleteAdminComponentsResponse.Details = null;
   } else {
     deleteAdminComponentsResponse.Error = null;
-    deleteAdminComponentsResponse.Details.IsDeleted = true;
+    
+    // Check if deletion was actually successful
+    if (resolvedResult && resolvedResult.success) {
+      deleteAdminComponentsResponse.Details = {
+        IsDeleted: true,
+        DeletedCount: resolvedResult.affectedRows || 0,
+        ProcessedCount: resolvedResult.processedCount || 0
+      };
+    } else {
+      // If no success flag, return false
+      deleteAdminComponentsResponse.Details = {
+        IsDeleted: false,
+        Error: "Deletion failed - no confirmation from database"
+      };
+    }
   }
   appLib.SendHttpResponse(functionContext, deleteAdminComponentsResponse);
 
@@ -1480,5 +1494,30 @@ var getAdminComponentsWithPaginationResponse = async (
     );
 
     return functionContext.res.send(response);
+  }
+};
+
+module.exports.DeleteComponentList = async (req, res) => {
+  var apiContext = new coreRequestModel.ApiContext(
+    req,
+    res,
+    "DeleteComponentList"
+  );
+
+  try {
+    var request = req.body;
+    
+    // ADD THIS LOGGING
+    console.log("DELETE REQUEST BODY:", JSON.stringify(request, null, 2));
+    console.log("ComponentList being deleted:", request.ComponentList);
+    
+    var functionContext = new coreRequestModel.FunctionContext(
+      apiContext,
+      requestType.DeleteComponentList
+    );
+
+    // ...existing code...
+  } catch (err) {
+    // ...existing code...
   }
 };
