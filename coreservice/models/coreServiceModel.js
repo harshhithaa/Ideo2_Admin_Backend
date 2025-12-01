@@ -221,16 +221,15 @@ class savePlaylistResponse {
 
 class saveScheduleRequest {
   constructor(req) {
-    this.scheduleRef = req.body.ScheduleRef ? req.body.ScheduleRef : null;
-    this.scheduleTitle = req.body.ScheduleTitle ? req.body.ScheduleTitle : null;
-    this.description = req.body.Description ? req.body.Description : null;
-    this.playlistRef = req.body.PlaylistRef ? req.body.PlaylistRef : null;
-    this.monitorRef = req.body.MonitorRef ? req.body.MonitorRef : null;
-    this.schedule = req.body.Schedule ? req.body.Schedule : null;
-    this.fixedTimePlayback = req.body.FixedTimePlayback
-      ? req.body.FixedTimePlayback
-      : 0;
-    this.isActive = req.body.IsActive ? req.body.IsActive : null;
+    // Changed to read lowercase body keys (matches frontend payload)
+    this.scheduleRef = req.body.scheduleRef ? req.body.scheduleRef : null;
+    this.scheduleTitle = req.body.scheduleTitle ? req.body.scheduleTitle : null;
+    this.description = req.body.description ? req.body.description : null;
+    this.playlistRef = req.body.playlistRef ? req.body.playlistRef : null;
+    this.monitorRef = req.body.monitorRef ? req.body.monitorRef : null;
+    this.schedule = req.body.schedule ? req.body.schedule : null;
+    this.fixedTimePlayback = req.body.fixedTimePlayback ? req.body.fixedTimePlayback : 0;
+    this.isActive = req.body.isActive ? req.body.isActive : null;
     this.currentTs = momentTimezone
       .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
       .tz("Asia/Kolkata")

@@ -293,7 +293,6 @@ var fetchMonitorDetailsResponse = (
 
 var processScheduleDetails = (functionContext, resolvedResult) => {
   var logger = functionContext.logger;
-
   logger.logInfo(`processScheduleDetails() invoked`);
 
   var finalPlaylist = [];
@@ -305,7 +304,6 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
   day = day.toString();
 
   console.log(day);
-  // console.log(resolvedResult.slice(-2)[0]);
 
   for (let i = 0; i < resolvedResult.length; i++) {
     if (
@@ -330,32 +328,30 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     }
   }
 
-  // if (resolvedResult.length == 5) {
-  //   var scheduledPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
-  //   var scheduleDetails = resolvedResult[2] ? resolvedResult[2][0] : [];
-  //   var defaultPlaylist = resolvedResult[3] ? resolvedResult[3] : [];
-
-  //   var days = JSON.parse(scheduleDetails.Days);
-  // } else {
-  //   var defaultPlaylist = resolvedResult[1] ? resolvedResult[1] : [];
-  //   finalPlaylist = defaultPlaylist;
-  // }
-
   if (days && days.length > 0) {
     finalPlaylist = days.includes(day) ? scheduledPlaylist : defaultPlaylist;
   } else {
     finalPlaylist = defaultPlaylist;
   }
 
-  // Normalize duration field: some DB selects return `MediaDuration`, ensure clients receive `Duration`
+  // ✅ FIX: Use Duration (from playlistmedia) first, only fall back to MediaDuration if Duration is null/undefined
   try {
     finalPlaylist = (finalPlaylist || []).map((item) => {
-      const duration =
-        item.MediaDuration !== undefined
-          ? item.MediaDuration
-          : item.Duration !== undefined
-          ? item.Duration
-          : null;
+      let duration;
+      
+      // Priority 1: Use Duration from playlistmedia (user-defined duration)
+      if (item.Duration !== undefined && item.Duration !== null) {
+        duration = item.Duration;
+      }
+      // Priority 2: For videos, use MediaDuration if Duration is null
+      else if (item.MediaDuration !== undefined && item.MediaDuration !== null) {
+        duration = item.MediaDuration;
+      }
+      // Priority 3: Default fallback
+      else {
+        duration = null;
+      }
+
       return {
         ...item,
         Duration: duration,
