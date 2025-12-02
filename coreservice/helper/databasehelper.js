@@ -613,23 +613,48 @@ module.exports.checkIfUserIsPresentInDB = async (
 module.exports.saveMediaDB = async (functionContext, resolvedResult) => {
   var logger = functionContext.logger;
   logger.logInfo("saveMediaDB() Invoked!");
+
   try {
-    let rows = await databaseModule.knex.raw(
-      `CALL usp_save_media('${JSON.stringify(resolvedResult)}')`
-    );
+    // ✅ Convert payload to JSON string for stored procedure
+    const mediaJSON = JSON.stringify(resolvedResult);
+
     logger.logInfo(
-      `saveMediaDB() :: Returned Result :: ${JSON.stringify(rows[0][0])}`
+      `saveMediaDB() :: Calling usp_save_media with JSON :: ${mediaJSON}`
     );
-    var result = rows[0][0] ? rows[0][0] : null;
+
+    // ✅ Call stored procedure with JSON parameter
+    let rows = await databaseModule.knex.raw(
+      `CALL usp_save_media(?)`,
+      [mediaJSON]
+    );
+
+    logger.logInfo(
+      `saveMediaDB() :: Returned Result :: ${JSON.stringify(rows[0])}`
+    );
+
+    // ✅ The stored procedure returns the inserted media records
+    var result = rows[0] && rows[0][0] ? rows[0][0] : [];
+    
+    if (!result || result.length === 0) {
+      logger.logInfo(`saveMediaDB() :: WARNING - No result returned from stored procedure`);
+    } else {
+      logger.logInfo(`saveMediaDB() :: Successfully inserted ${result.length} media records`);
+    }
+
     return result;
   } catch (errsaveMediaDB) {
     logger.logInfo(
-      `saveMediaDB() :: Error :: ${JSON.stringify(errsaveMediaDB)}`
+      `saveMediaDB() :: Error :: ${JSON.stringify({
+        message: errsaveMediaDB.message,
+        sqlMessage: errsaveMediaDB.sqlMessage,
+        sqlState: errsaveMediaDB.sqlState,
+        sql: errsaveMediaDB.sql
+      })}`
     );
 
     functionContext.error = new coreRequestModel.ErrorModel(
-      (errorMessage = constant.ErrorMessage.ApplicationError),
-      (errorCode = constant.ErrorCode.ApplicationError),
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError,
       {
         sqlMessage: errsaveMediaDB.sqlMessage,
         stack: errsaveMediaDB.stack,

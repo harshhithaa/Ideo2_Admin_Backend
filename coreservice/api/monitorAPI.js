@@ -296,70 +296,138 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
   logger.logInfo(`processScheduleDetails() invoked`);
 
   let finalPlaylist = [];
-  let today = moment()
-    .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
-    .tz("Asia/Kolkata")
-    .day()
-    .toString();
+  
+  // Get current day and time
+  const now = moment().utc().tz("Asia/Kolkata");
+  const today = now.format('dddd').toLowerCase();
+  const currentTime = now.format('HH:mm:ss');
+
+  logger.logInfo(`processScheduleDetails() :: Today: ${today}, Current Time: ${currentTime}`);
 
   // Find the schedule details result set
   let scheduleDetails = null;
   let scheduledPlaylist = null;
   let defaultPlaylist = null;
 
+  // Filter out non-array results (like OkPacket)
+  const validResults = resolvedResult.filter(
+    (item) => Array.isArray(item) && item.length > 0
+  );
+
+  logger.logInfo(`processScheduleDetails() :: Valid result sets: ${validResults.length}`);
+
   // Find result sets by their structure
-  for (let i = 0; i < resolvedResult.length; i++) {
+  for (let i = 0; i < validResults.length; i++) {
+    const currentSet = validResults[i];
+
     // Schedule details result set (has ScheduleRef)
-    if (resolvedResult[i][0] && resolvedResult[i][0].hasOwnProperty("ScheduleRef")) {
-      scheduleDetails = resolvedResult[i][0];
-      // Scheduled playlist is the previous result set
-      scheduledPlaylist = resolvedResult[i - 1] ? resolvedResult[i - 1] : [];
-      // Default playlist is always the last result set
-      defaultPlaylist = resolvedResult.slice(-1)[0] ? resolvedResult.slice(-1)[0] : [];
+    if (currentSet[0] && currentSet[0].hasOwnProperty("ScheduleRef")) {
+      scheduleDetails = currentSet[0];
+      logger.logInfo(`processScheduleDetails() :: Found schedule at index ${i}`);
+      logger.logInfo(`processScheduleDetails() :: Schedule Details: ${JSON.stringify(scheduleDetails)}`);
+
+      // Scheduled playlist is the previous valid result set
+      if (i > 0) {
+        scheduledPlaylist = validResults[i - 1];
+        logger.logInfo(`processScheduleDetails() :: Scheduled playlist has ${scheduledPlaylist.length} items`);
+      }
+
+      // Default playlist is the last valid result set
+      defaultPlaylist = validResults[validResults.length - 1];
+      logger.logInfo(`processScheduleDetails() :: Default playlist has ${defaultPlaylist.length} items`);
       break;
     }
   }
-  if (!defaultPlaylist) {
-    defaultPlaylist = resolvedResult.slice(-1)[0] ? resolvedResult.slice(-1)[0] : [];
+
+  // If no schedule found, use the last valid array as default playlist
+  if (!defaultPlaylist && validResults.length > 0) {
+    defaultPlaylist = validResults[validResults.length - 1];
+    logger.logInfo(`processScheduleDetails() :: No schedule found, using last result set with ${defaultPlaylist.length} items`);
   }
 
-  // If scheduleDetails exists, check if today is in Days
+  // Decide which playlist to use based on schedule
   if (scheduleDetails && scheduleDetails.Days) {
     let daysArr = [];
     try {
       daysArr = JSON.parse(scheduleDetails.Days);
+      // Convert array elements to lowercase for comparison
+      daysArr = daysArr.map(d => d.toLowerCase());
+      logger.logInfo(`processScheduleDetails() :: Schedule days: ${JSON.stringify(daysArr)}`);
     } catch (e) {
       logger.logInfo(`processScheduleDetails() :: Days parse error ${e}`);
     }
-    if (Array.isArray(daysArr) && daysArr.includes(today)) {
-      finalPlaylist = scheduledPlaylist;
+
+    // ✅ Check if today is in scheduled days AND current time is within scheduled time range
+    const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(today);
+    
+    let isWithinTimeRange = false;
+    if (scheduleDetails.StartTime && scheduleDetails.EndTime) {
+      const startTime = scheduleDetails.StartTime.substring(0, 8); // HH:mm:ss
+      const endTime = scheduleDetails.EndTime.substring(0, 8);
+      
+      logger.logInfo(`processScheduleDetails() :: Schedule Time Range: ${startTime} - ${endTime}`);
+      
+      // Check if current time is within the schedule range
+      isWithinTimeRange = currentTime >= startTime && currentTime <= endTime;
+      logger.logInfo(`processScheduleDetails() :: Is within time range: ${isWithinTimeRange}`);
+    }
+
+    // ✅ Also check date range
+    let isWithinDateRange = true;
+    if (scheduleDetails.StartDate && scheduleDetails.EndDate) {
+      const currentDate = now.format('YYYY-MM-DD');
+      const startDate = moment(scheduleDetails.StartDate).format('YYYY-MM-DD');
+      const endDate = moment(scheduleDetails.EndDate).format('YYYY-MM-DD');
+      
+      logger.logInfo(`processScheduleDetails() :: Schedule Date Range: ${startDate} - ${endDate}`);
+      
+      isWithinDateRange = currentDate >= startDate && currentDate <= endDate;
+      logger.logInfo(`processScheduleDetails() :: Is within date range: ${isWithinDateRange}`);
+    }
+
+    // Use scheduled playlist only if all conditions are met
+    if (isScheduledDay && isWithinTimeRange && isWithinDateRange) {
+      finalPlaylist = scheduledPlaylist || defaultPlaylist || [];
+      logger.logInfo(`processScheduleDetails() :: ✅ Using scheduled playlist (${finalPlaylist.length} items)`);
     } else {
-      finalPlaylist = defaultPlaylist;
+      finalPlaylist = defaultPlaylist || [];
+      logger.logInfo(`processScheduleDetails() :: Using default playlist (${finalPlaylist.length} items) - Conditions not met: Day=${isScheduledDay}, Time=${isWithinTimeRange}, Date=${isWithinDateRange}`);
     }
   } else {
-    finalPlaylist = defaultPlaylist;
+    finalPlaylist = defaultPlaylist || [];
+    logger.logInfo(`processScheduleDetails() :: No schedule, using default playlist (${finalPlaylist.length} items)`);
+  }
+
+  // Ensure finalPlaylist is always an array
+  if (!Array.isArray(finalPlaylist)) {
+    logger.logInfo(`processScheduleDetails() :: finalPlaylist is not an array, converting: ${JSON.stringify(finalPlaylist)}`);
+    finalPlaylist = [];
   }
 
   // Normalize Duration
   try {
-    finalPlaylist = (finalPlaylist || []).map((item) => {
+    finalPlaylist = finalPlaylist.map((item) => {
       let duration;
       if (item.Duration !== undefined && item.Duration !== null) {
         duration = item.Duration;
       } else if (item.MediaDuration !== undefined && item.MediaDuration !== null) {
         duration = item.MediaDuration;
       } else {
-        duration = null;
+        duration = item.MediaType === "video" ? null : 10;
       }
       return {
         ...item,
         Duration: duration,
       };
     });
+
+    logger.logInfo(`processScheduleDetails() :: Normalized ${finalPlaylist.length} items`);
   } catch (e) {
     logger.logInfo(`processScheduleDetails() :: normalization error ${e}`);
+    finalPlaylist = [];
   }
 
+  logger.logInfo(`processScheduleDetails() :: Returning ${finalPlaylist.length} items`);
   return finalPlaylist;
 };
 
