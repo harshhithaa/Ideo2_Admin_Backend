@@ -295,63 +295,62 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
   var logger = functionContext.logger;
   logger.logInfo(`processScheduleDetails() invoked`);
 
-  var finalPlaylist = [];
-
-  let day = moment()
+  let finalPlaylist = [];
+  let today = moment()
     .utc(new Date(), "YYYY-MM-DD HH:mm:ss")
     .tz("Asia/Kolkata")
-    .day();
-  day = day.toString();
+    .day()
+    .toString();
 
-  console.log(day);
+  // Find the schedule details result set
+  let scheduleDetails = null;
+  let scheduledPlaylist = null;
+  let defaultPlaylist = null;
 
+  // Find result sets by their structure
   for (let i = 0; i < resolvedResult.length; i++) {
-    if (
-      resolvedResult[i][0] &&
-      resolvedResult[i][0].hasOwnProperty("ScheduleRef")
-    ) {
-      var scheduledPlaylist = resolvedResult[i - 1]
-        ? resolvedResult[i - 1]
-        : [];
-      var scheduleDetails = resolvedResult[i][0] ? resolvedResult[i][0] : [];
-      var defaultPlaylist = resolvedResult.slice(-2)[0]
-        ? resolvedResult.slice(-2)[0]
-        : [];
-
-      var days = JSON.parse(scheduleDetails.Days);
+    // Schedule details result set (has ScheduleRef)
+    if (resolvedResult[i][0] && resolvedResult[i][0].hasOwnProperty("ScheduleRef")) {
+      scheduleDetails = resolvedResult[i][0];
+      // Scheduled playlist is the previous result set
+      scheduledPlaylist = resolvedResult[i - 1] ? resolvedResult[i - 1] : [];
+      // Default playlist is always the last result set
+      defaultPlaylist = resolvedResult.slice(-1)[0] ? resolvedResult.slice(-1)[0] : [];
       break;
-    } else {
-      var defaultPlaylist = resolvedResult.slice(-2)[0]
-        ? resolvedResult.slice(-2)[0]
-        : [];
-      finalPlaylist = defaultPlaylist;
     }
   }
+  if (!defaultPlaylist) {
+    defaultPlaylist = resolvedResult.slice(-1)[0] ? resolvedResult.slice(-1)[0] : [];
+  }
 
-  if (days && days.length > 0) {
-    finalPlaylist = days.includes(day) ? scheduledPlaylist : defaultPlaylist;
+  // If scheduleDetails exists, check if today is in Days
+  if (scheduleDetails && scheduleDetails.Days) {
+    let daysArr = [];
+    try {
+      daysArr = JSON.parse(scheduleDetails.Days);
+    } catch (e) {
+      logger.logInfo(`processScheduleDetails() :: Days parse error ${e}`);
+    }
+    if (Array.isArray(daysArr) && daysArr.includes(today)) {
+      finalPlaylist = scheduledPlaylist;
+    } else {
+      finalPlaylist = defaultPlaylist;
+    }
   } else {
     finalPlaylist = defaultPlaylist;
   }
 
-  // ✅ FIX: Use Duration (from playlistmedia) first, only fall back to MediaDuration if Duration is null/undefined
+  // Normalize Duration
   try {
     finalPlaylist = (finalPlaylist || []).map((item) => {
       let duration;
-      
-      // Priority 1: Use Duration from playlistmedia (user-defined duration)
       if (item.Duration !== undefined && item.Duration !== null) {
         duration = item.Duration;
-      }
-      // Priority 2: For videos, use MediaDuration if Duration is null
-      else if (item.MediaDuration !== undefined && item.MediaDuration !== null) {
+      } else if (item.MediaDuration !== undefined && item.MediaDuration !== null) {
         duration = item.MediaDuration;
-      }
-      // Priority 3: Default fallback
-      else {
+      } else {
         duration = null;
       }
-
       return {
         ...item,
         Duration: duration,

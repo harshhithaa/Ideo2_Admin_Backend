@@ -1166,7 +1166,9 @@ var processComponentDetailsData = async (
         ...resolvedData,
       };
     } else if (requestDetails.componentType == constant.COMPONENTS.Monitor) {
-      resolvedData.MonitorData = resolvedResult[0][0];
+      // Monitor details: resolvedResult[0][0] is monitor, resolvedResult[1] is schedules
+      resolvedData.Monitor = resolvedResult[0][0];
+      resolvedData.Schedules = resolvedResult[1] || [];
       details = {
         ...resolvedData,
       };
