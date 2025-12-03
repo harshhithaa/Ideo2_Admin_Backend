@@ -108,18 +108,28 @@ module.exports.SaveMedia = async (req, res) => {
   };
 
   try {
+    // processMedia uploads files to storage and populates requestContext.fileUploadDetails
     var processMediaResponse = await processMedia(
       functionContext,
       req,
       requestContext
     );
 
-    var saveMediaInDBResponse = await databaseHelper.saveMediaDB(
-      functionContext,
-      requestContext
-    );
+    // --- NEW: Save to DB in background (do not await), so we can return immediate placeholder response ---
+    databaseHelper
+      .saveMediaDB(functionContext, requestContext)
+      .then((saveRes) => {
+        logger.logInfo(`saveMediaDB() background save completed: ${JSON.stringify(saveRes)}`);
+      })
+      .catch((dbErr) => {
+        logger.logInfo(`saveMediaDB() background save failed: ${JSON.stringify(dbErr)}`);
+        // attach error to functionContext for logging only
+        functionContext.error = dbErr;
+      });
 
+    // Immediately respond with the uploaded file details (placeholders) so frontend can show progress/placeholder
     saveMediaResponse(functionContext, requestContext);
+    return;
   } catch (errSaveMedia) {
     if (!errSaveMedia.ErrorMessage && !errSaveMedia.ErrorCode) {
       logger.logInfo(`SaveMedia() :: Error :: ${errSaveMedia}`);
@@ -137,6 +147,55 @@ module.exports.SaveMedia = async (req, res) => {
     }
     logger.logInfo(`SaveMedia() :: Error :: ${JSON.stringify(errSaveMedia)}`);
     saveMediaResponse(functionContext, null);
+  }
+};
+
+// --- NEW endpoint: fetch single media by MediaRef (used by frontend polling) ---
+module.exports.FetchMedia = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+  logger.logInfo(`FetchMedia invoked() :: Query ${JSON.stringify(req.query)}`);
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.FETCHMEDIA,
+    null,
+    res,
+    logger
+  );
+
+  try {
+    var fetchRequest = new coreRequestModel.FetchMediaRequest(req);
+
+    // attach context userRef (if required)
+    var requestContext = {
+      ...fetchRequest,
+      userRef: functionContext.userRef
+    };
+
+    var dbResult = await databaseHelper.fetchMediaFromDB(functionContext, requestContext);
+
+    // Build response using the same shape as other responses
+    var response = new coreRequestModel.FetchMediaResponse();
+    response.RequestID = functionContext.requestID;
+    if (functionContext.error) {
+      response.Error = functionContext.error;
+      response.Details = null;
+    } else {
+      response.Error = null;
+      response.Details = dbResult; // may be null if not found
+    }
+    appLib.SendHttpResponse(functionContext, response);
+  } catch (err) {
+    logger.logInfo(`FetchMedia() :: Error :: ${JSON.stringify(err)}`);
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError,
+      err.message
+    );
+    var response = new coreRequestModel.FetchMediaResponse();
+    response.RequestID = functionContext.requestID;
+    response.Error = functionContext.error;
+    response.Details = null;
+    appLib.SendHttpResponse(functionContext, response);
   }
 };
 

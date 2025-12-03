@@ -12,6 +12,10 @@ router.get("/componentlist", adminApi.GetAdminComponents);
 router.get("/componentlistpaginated", adminApi.GetAdminComponentsWithPagination); // New route
 // Alias route for playlist UI to explicitly use paginated endpoint
 router.get("/componentlistforplaylist", adminApi.GetAdminComponentsWithPagination);
+
+// NEW: fetch single media (used by frontend polling)
+router.get("/fetchmedia", adminApi.FetchMedia);
+
 router.post("/deletecomponentlist", adminApi.DeleteAdminComponents);
 router.post(
   "/validatedeletecomponentlist",
