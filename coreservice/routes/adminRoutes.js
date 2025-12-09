@@ -24,4 +24,7 @@ router.post(
 router.post("/componentdetails", adminApi.GetAdminComponentsDetails);
 router.post("/updateallmonitors", adminApi.UpdateAllMonitors);
 
+// NEW: Pull-based monitor status endpoint
+router.get("/monitor/:monitorRef/status", adminApi.GetMonitorStatus);
+
 module.exports = router;

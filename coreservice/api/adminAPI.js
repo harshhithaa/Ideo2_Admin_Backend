@@ -1580,3 +1580,88 @@ module.exports.DeleteComponentList = async (req, res) => {
     // ...existing code...
   }
 };
+
+// NEW: Pull status from a connected monitor via Socket.IO
+module.exports.GetMonitorStatus = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+  logger.logInfo(`GetMonitorStatus invoked() for ${req.params.monitorRef}`);
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.FETCHMONITORDETAILS,
+    null,
+    res,
+    logger
+  );
+
+  const monitorRef = req.params.monitorRef;
+
+  try {
+    if (!monitorRef) {
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.Invalid_Request,
+        constant.ErrorCode.Invalid_Request
+      );
+      appLib.SendHttpResponse(functionContext, {
+        Error: functionContext.error,
+        Details: null,
+        RequestID: functionContext.requestID
+      });
+      return;
+    }
+
+    // Use global.monitorSockets map created in index.js
+    const socket = global.monitorSockets.get(monitorRef);
+
+    if (!socket) {
+      // monitor offline
+      appLib.SendHttpResponse(functionContext, {
+        Error: null,
+        Details: { connected: false, message: "Monitor offline" },
+        RequestID: functionContext.requestID
+      });
+      return;
+    }
+
+    // send a status request and wait for a one-time response
+    const statusPromise = new Promise((resolve, reject) => {
+      const timeoutMs = 5000;
+      const timeout = setTimeout(() => {
+        reject(new Error("Status response timeout"));
+      }, timeoutMs);
+
+      // listen only once for this socket
+      socket.once("status_response", (data) => {
+        clearTimeout(timeout);
+        resolve(data);
+      });
+
+      // emit status request
+      try {
+        socket.emit("status_request", { monitorRef });
+      } catch (e) {
+        clearTimeout(timeout);
+        reject(e);
+      }
+    });
+
+    const statusData = await statusPromise;
+
+    appLib.SendHttpResponse(functionContext, {
+      Error: null,
+      Details: { connected: true, ...statusData },
+      RequestID: functionContext.requestID
+    });
+  } catch (err) {
+    logger.logInfo(`GetMonitorStatus() :: Error :: ${err}`);
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError,
+      err.message
+    );
+    appLib.SendHttpResponse(functionContext, {
+      Error: functionContext.error,
+      Details: null,
+      RequestID: functionContext.requestID
+    });
+  }
+};

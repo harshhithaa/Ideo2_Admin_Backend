@@ -7,6 +7,9 @@ var bodyParser = require("body-parser");
 var appLib = require("applib");
 var upload = require("./helper/general").getFileUploadConfig;
 var cors = require("cors");
+// NEW:
+var http = require("http");
+var { Server } = require("socket.io");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ type: "application/json" }));
@@ -22,6 +25,52 @@ app.use(function (req, res, next) {
 });
 
 var logger = new appLib.Logger(null, null);
+
+// Create HTTP server and Socket.IO instance
+var server = http.createServer(app);
+var io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store connected monitors: monitorRef -> socket
+global.monitorSockets = new Map();
+
+io.on("connection", (socket) => {
+  logger.logInfo(`Socket connected: ${socket.id}`);
+
+  socket.on("monitor_register", (data) => {
+    const { monitorRef } = data || {};
+    if (monitorRef) {
+      global.monitorSockets.set(monitorRef, socket);
+      logger.logInfo(`Monitor registered via socket: ${monitorRef}`);
+      socket.emit("registration_confirmed", { success: true, monitorRef });
+    }
+  });
+
+  // generic status response handler (admin endpoint will await a one-time response)
+  socket.on("status_response", (data) => {
+    logger.logInfo(`status_response from ${data && data.monitorRef}: ${JSON.stringify(data)}`);
+    // Admin endpoint will listen for this per-socket with socket.once
+  });
+
+  socket.on("disconnect", () => {
+    // remove from map by socket id
+    for (let [mRef, s] of global.monitorSockets.entries()) {
+      if (s.id === socket.id) {
+        global.monitorSockets.delete(mRef);
+        logger.logInfo(`Monitor disconnected: ${mRef}`);
+        break;
+      }
+    }
+  });
+});
+
+// make io available to other modules if required
+module.exports.io = io;
+
 startServerProcess(logger);
 
 var middleware = require("./middleware/authenticator");
@@ -39,19 +88,17 @@ app.use("/api/device", deviceRoute);
 var monitorRoute = require("./routes/monitorRoutes");
 app.use("/api/monitor", monitorRoute);
 
-// Fetch Primary Setings From Database Residing in applibf
+// Fetch Primary Settings From Database
 async function startServerProcess(logger) {
   try {
     logger.logInfo(`StartServerProcess Invoked()`);
     await appLib.fetchDBSettings(logger, settings, databaseModule);
 
-    app.listen(process.env.NODE_PORT, () => {
+    server.listen(process.env.NODE_PORT, () => {
       logger.logInfo("server running on port " + process.env.NODE_PORT);
       console.log("server running on port " + process.env.NODE_PORT);
     });
   } catch (errFetchDBSettings) {
-    logger.logInfo(
-      "Error occured in starting node services. Need immediate check."
-    );
+    logger.logInfo("Error occured in starting node services. Need immediate check.");
   }
 }
