@@ -375,6 +375,37 @@ class getAdminComponentWithPaginationResponse {
   }
 }
 
+class UpdateMonitorStatusRequest {
+  constructor(req) {
+    this.MonitorRef = req.body.MonitorRef;
+    this.Status = req.body.Status;
+    this.CurrentMedia = req.body.CurrentMedia;
+    this.CurrentPlaylist = req.body.CurrentPlaylist;
+  }
+}
+
+class UpdateMonitorStatusResponse {
+  constructor() {
+    this.RequestID = null;
+    this.Error = null;
+    this.Details = null;
+  }
+}
+
+class GetMonitorStatusRequest {
+  constructor(req) {
+    this.MonitorRef = req.body.MonitorRef || null;
+  }
+}
+
+class GetMonitorStatusResponse {
+  constructor() {
+    this.Error = null;
+    this.Details = null;
+    this.RequestID = null;
+  }
+}
+
 module.exports.ErrorModel = errorModel;
 module.exports.AdminLoginRequest = adminLoginRequest;
 module.exports.AdminLoginResponse = adminLoginResponse;
@@ -417,3 +448,7 @@ module.exports.FetchMediaRequest = fetchMediaRequest;
 module.exports.FetchMediaResponse = fetchMediaResponse;
 module.exports.GetAdminComponentWithPaginationRequest = getAdminComponentWithPaginationRequest;
 module.exports.GetAdminComponentWithPaginationResponse = getAdminComponentWithPaginationResponse;
+module.exports.UpdateMonitorStatusRequest = UpdateMonitorStatusRequest;
+module.exports.UpdateMonitorStatusResponse = UpdateMonitorStatusResponse;
+module.exports.GetMonitorStatusRequest = GetMonitorStatusRequest;
+module.exports.GetMonitorStatusResponse = GetMonitorStatusResponse;

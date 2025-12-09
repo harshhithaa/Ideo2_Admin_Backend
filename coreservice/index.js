@@ -37,6 +37,8 @@ var io = new Server(server, {
 
 // Store connected monitors: monitorRef -> socket
 global.monitorSockets = new Map();
+// ✅ ADD THIS: Initialize global cache for monitor status
+global.monitorStatusCache = {};
 
 io.on("connection", (socket) => {
   logger.logInfo(`Socket connected: ${socket.id}`);
@@ -50,14 +52,24 @@ io.on("connection", (socket) => {
     }
   });
 
-  // generic status response handler (admin endpoint will await a one-time response)
+  // ✅ FIX: Store current server time, not the timestamp from monitor
   socket.on("status_response", (data) => {
     logger.logInfo(`status_response from ${data && data.monitorRef}: ${JSON.stringify(data)}`);
-    // Admin endpoint will listen for this per-socket with socket.once
+    
+    if (data && data.monitorRef) {
+      global.monitorStatusCache[data.monitorRef] = {
+        ...data,
+        socketId: socket.id,
+        // ✅ Use current server time instead of monitor's timestamp
+        lastUpdated: new Date(),
+        receivedAt: new Date().toISOString()
+      };
+    }
   });
 
   socket.on("disconnect", () => {
-    // remove from map by socket id
+    logger.logInfo(`Socket disconnected: ${socket.id}`);
+    
     for (let [mRef, s] of global.monitorSockets.entries()) {
       if (s.id === socket.id) {
         global.monitorSockets.delete(mRef);
@@ -65,6 +77,13 @@ io.on("connection", (socket) => {
         break;
       }
     }
+    
+    Object.keys(global.monitorStatusCache).forEach(monitorRef => {
+      if (global.monitorStatusCache[monitorRef].socketId === socket.id) {
+        delete global.monitorStatusCache[monitorRef];
+        logger.logInfo(`Monitor status cache cleared: ${monitorRef}`);
+      }
+    });
   });
 });
 

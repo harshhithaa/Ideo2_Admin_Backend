@@ -210,6 +210,13 @@ module.exports.fetchMediaRequest = (requestParams) => {
   return joiSchema.validate(requestParams);
 };
 
+module.exports.monitorStatusRequest = (requestParams) => {
+  var joiSchema = joi.object({
+    monitorRef: joi.string().required(),
+  });
+  return joiSchema.validate(requestParams);
+};
+
 module.exports.getAdminComponentWithPaginationRequest = (requestParams) => {
   var joiSchema = joi.object({
     componentType: joi
@@ -229,4 +236,22 @@ module.exports.getAdminComponentWithPaginationRequest = (requestParams) => {
     pageSize: joi.number().optional().min(1).max(100).default(10),
   });
   return joiSchema.validate(requestParams);
+};
+
+module.exports.updateMonitorStatusRequest = (requestParams) => {
+  var joiSchema = joi.object({
+    MonitorRef: joi.string().required(),
+    Status: joi.string().optional(),
+    CurrentMedia: joi.string().optional(),
+    CurrentPlaylist: joi.string().optional(),
+  });
+  return joiSchema.validate(requestParams);
+};
+
+module.exports.getMonitorStatusRequest = (requestParams) => {
+  const schema = joi.object({
+    MonitorRef: joi.string().required()
+  });
+
+  return schema.validate(requestParams);
 };

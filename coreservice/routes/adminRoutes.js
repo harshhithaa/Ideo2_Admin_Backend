@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 
 var adminApi = require("../api/adminAPI");
+var monitorApi = require("../api/monitorAPI"); // ✅ Add this if not present
 
 router.post("/savesystemuser", adminApi.SaveSystemUser);
 router.post("/savemedia", adminApi.SaveMedia);
@@ -25,6 +26,6 @@ router.post("/componentdetails", adminApi.GetAdminComponentsDetails);
 router.post("/updateallmonitors", adminApi.UpdateAllMonitors);
 
 // NEW: Pull-based monitor status endpoint
-router.get("/monitor/:monitorRef/status", adminApi.GetMonitorStatus);
+router.post("/monitor/fetchmonitorstatus", monitorApi.GetMonitorStatus); // ✅ Add this line
 
 module.exports = router;

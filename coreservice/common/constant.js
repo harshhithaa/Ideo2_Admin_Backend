@@ -43,6 +43,7 @@ module.exports.RequestType = {
   FETCHMONITORDETAILS: "FMD",
   UPDATEALLMONITORS: "UAM",
   FETCHMEDIA: "FM",
+  GETMONITORSTATUS: "GETMONITORSTATUS",
 };
 
 module.exports.CustomerVerificationStatus = {

@@ -452,4 +452,172 @@ var getOrientation = (functionContext, resolvedResult) => {
   return resolvedResult[0][0].Orientation;
 };
 
-// slideTime is no longer returned by the backend; per-media Duration is used instead
+module.exports.UpdateMonitorStatus = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+
+  logger.logInfo(`UpdateMonitorStatus invoked()!!`);
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.UPDATEMONITORSTATUS,
+    null,
+    res,
+    logger
+  );
+
+  var updateStatusRequest = new coreRequestModel.UpdateMonitorStatusRequest(req);
+  logger.logInfo(`UpdateMonitorStatus() :: Request Object : ${JSON.stringify(updateStatusRequest)}`);
+
+  var validateRequest = joiValidationModel.updateMonitorStatusRequest(updateStatusRequest);
+
+  if (validateRequest.error) {
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.Invalid_Request,
+      constant.ErrorCode.Invalid_Request,
+      validateRequest.error.details
+    );
+    logger.logInfo(
+      `UpdateMonitorStatus() Error:: Invalid Request :: ${JSON.stringify(updateStatusRequest)}`
+    );
+    updateMonitorStatusResponse(functionContext, null);
+    return;
+  }
+
+  try {
+    // Store status in cache/database with timestamp
+    await databaseHelper.updateMonitorStatus(
+      functionContext,
+      updateStatusRequest
+    );
+
+    logger.logInfo(`UpdateMonitorStatus() :: Status updated for monitor: ${updateStatusRequest.MonitorRef}`);
+    updateMonitorStatusResponse(functionContext, { success: true });
+  } catch (errUpdateStatus) {
+    if (!errUpdateStatus.ErrorMessage && !errUpdateStatus.ErrorCode) {
+      logger.logInfo(`UpdateMonitorStatus() :: Error :: ${errUpdateStatus}`);
+      functionContext.error = new coreRequestModel.ErrorModel(
+        constant.ErrorMessage.ApplicationError,
+        constant.ErrorCode.ApplicationError
+      );
+    }
+    logger.logInfo(`UpdateMonitorStatus() :: Error :: ${JSON.stringify(errUpdateStatus)}`);
+    updateMonitorStatusResponse(functionContext, null);
+  }
+};
+
+var updateMonitorStatusResponse = (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+
+  logger.logInfo(`updateMonitorStatusResponse() invoked`);
+
+  var UpdateStatusResponse = new coreRequestModel.UpdateMonitorStatusResponse();
+
+  UpdateStatusResponse.RequestID = functionContext.requestID;
+  if (functionContext.error) {
+    UpdateStatusResponse.Error = functionContext.error;
+    UpdateStatusResponse.Details = null;
+  } else {
+    UpdateStatusResponse.Error = null;
+    UpdateStatusResponse.Details = resolvedResult;
+  }
+
+  appLib.SendHttpResponse(functionContext, UpdateStatusResponse);
+
+  logger.logInfo(`updateMonitorStatusResponse :: ${JSON.stringify(UpdateStatusResponse)}`);
+  logger.logInfo(`updateMonitorStatusResponse completed`);
+};
+
+module.exports.GetMonitorStatus = async (req, res) => {
+  var logger = new appLib.Logger(req.originalUrl, res.apiContext.requestID);
+  logger.logInfo("GetMonitorStatus invoked()!!");
+
+  var functionContext = new coreRequestModel.FunctionContext(
+    requestType.GETMONITORSTATUS,
+    null,
+    res,
+    logger
+  );
+
+  var getMonitorStatusRequest = new coreRequestModel.GetMonitorStatusRequest(req);
+  logger.logInfo(`GetMonitorStatus() :: Request: ${JSON.stringify(getMonitorStatusRequest)}`);
+
+  var validateRequest = joiValidationModel.getMonitorStatusRequest(getMonitorStatusRequest);
+  if (validateRequest.error) {
+    logger.logInfo(`GetMonitorStatus() :: Validation Error: ${validateRequest.error}`);
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.InvalidDetails,
+      constant.ErrorCode.InvalidDetails,
+      validateRequest.error
+    );
+    getMonitorStatusResponse(functionContext, null);
+    return;
+  }
+
+  try {
+    // Get the Socket.IO instance from the app
+    const io = req.app.get('io');
+    
+    // Get cached status from memory (you're already storing this via Socket.IO)
+    const monitorStatus = global.monitorStatusCache 
+      ? global.monitorStatusCache[getMonitorStatusRequest.MonitorRef] 
+      : null;
+
+    logger.logInfo(`GetMonitorStatus() :: Status from cache: ${JSON.stringify(monitorStatus)}`);
+
+    getMonitorStatusResponse(functionContext, monitorStatus);
+  } catch (error) {
+    logger.logInfo(`GetMonitorStatus() :: Error: ${JSON.stringify(error)}`);
+    functionContext.error = new coreRequestModel.ErrorModel(
+      constant.ErrorMessage.ApplicationError,
+      constant.ErrorCode.ApplicationError,
+      error
+    );
+    getMonitorStatusResponse(functionContext, null);
+  }
+};
+
+var getMonitorStatusResponse = (functionContext, resolvedResult) => {
+  var logger = functionContext.logger;
+  logger.logInfo("getMonitorStatusResponse() invoked");
+
+  const response = new coreRequestModel.GetMonitorStatusResponse();
+  response.RequestID = functionContext.requestID;
+  
+  if (functionContext.error) {
+    response.Error = functionContext.error;
+    response.Details = null;
+  } else if (resolvedResult) {
+    // ✅ Use the server time when we received the update, not monitor's timestamp
+    const lastUpdate = new Date(resolvedResult.lastUpdated || resolvedResult.receivedAt);
+    const now = new Date();
+    const secondsSinceUpdate = Math.floor((now - lastUpdate) / 1000);
+    
+    // ✅ Keep 30 second threshold - if monitor sends updates every 10s, this is reasonable
+    const isOnline = secondsSinceUpdate <= 30;
+    
+    logger.logInfo(`GetMonitorStatus :: Last update: ${lastUpdate}, Now: ${now}, Seconds: ${secondsSinceUpdate}, Online: ${isOnline}`);
+    
+    response.Error = null;
+    response.Details = {
+      MonitorRef: resolvedResult.monitorRef,
+      MonitorName: resolvedResult.monitorName,
+      Status: isOnline ? 'online' : 'offline',
+      CurrentMedia: resolvedResult.currentMedia,
+      CurrentPlaylist: resolvedResult.currentPlaylist,
+      PlaylistType: resolvedResult.playlistType,
+      MediaIndex: resolvedResult.mediaIndex,
+      TotalMedia: resolvedResult.totalMedia,
+      LastUpdate: resolvedResult.receivedAt || lastUpdate.toISOString(),
+      SecondsSinceUpdate: secondsSinceUpdate
+    };
+  } else {
+    response.Error = null;
+    response.Details = {
+      Status: 'unknown',
+      Message: 'No status data available'
+    };
+  }
+
+  appLib.SendHttpResponse(functionContext, response);
+  logger.logInfo(`getMonitorStatusResponse :: ${JSON.stringify(response)}`);
+  logger.logInfo("getMonitorStatusResponse completed");
+};

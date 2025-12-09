@@ -979,3 +979,70 @@ module.exports.getAdminComponentsWithPaginationDB = async (
     throw functionContext.error;
   }
 };
+
+module.exports.updateMonitorStatus = async (functionContext, requestContext) => {
+  var logger = functionContext.logger;
+  logger.logInfo("updateMonitorStatus() Invoked!");
+
+  try {
+    const query = `
+      INSERT INTO monitor_heartbeat 
+      (MonitorRef, LastHeartbeat, Status, CurrentMedia, CurrentPlaylist, UpdatedAt)
+      VALUES (?, NOW(), ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        LastHeartbeat = NOW(),
+        Status = VALUES(Status),
+        CurrentMedia = VALUES(CurrentMedia),
+        CurrentPlaylist = VALUES(CurrentPlaylist),
+        UpdatedAt = NOW()
+    `;
+
+    await databaseModule.ExecuteQuery(
+      query,
+      [
+        requestContext.MonitorRef,
+        requestContext.Status || 'online',
+        requestContext.CurrentMedia,
+        requestContext.CurrentPlaylist
+      ]
+    );
+
+    logger.logInfo("updateMonitorStatus() completed successfully");
+    return { success: true };
+  } catch (error) {
+    logger.logInfo(`updateMonitorStatus() error: ${error}`);
+    throw error;
+  }
+};
+
+module.exports.getMonitorStatus = async (functionContext, requestContext) => {
+  var logger = functionContext.logger;
+  logger.logInfo("getMonitorStatus() Invoked!");
+
+  try {
+    const query = `
+      SELECT 
+        MonitorRef,
+        LastHeartbeat,
+        Status,
+        CurrentMedia,
+        CurrentPlaylist,
+        TIMESTAMPDIFF(SECOND, LastHeartbeat, NOW()) as SecondsSinceLastHeartbeat
+      FROM monitor_heartbeat
+      WHERE MonitorRef = ?
+    `;
+
+    const result = await databaseModule.ExecuteQuery(query, [requestContext.MonitorRef]);
+
+    if (result && result.length > 0) {
+      logger.logInfo(`getMonitorStatus() :: Found status: ${JSON.stringify(result[0])}`);
+      return result[0];
+    }
+
+    logger.logInfo("getMonitorStatus() :: No status found");
+    return null;
+  } catch (error) {
+    logger.logInfo(`getMonitorStatus() error: ${error}`);
+    throw error;
+  }
+};
