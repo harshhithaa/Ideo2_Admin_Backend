@@ -304,6 +304,17 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
 
   logger.logInfo(`processScheduleDetails() :: Today: ${today}, Current Time: ${currentTime}`);
 
+  // ✅ ADD: Map day names to numeric codes (matching SaveSchedule.jsx)
+  const DAY_NAME_TO_CODE = {
+    'sunday': '7',
+    'monday': '1',
+    'tuesday': '2',
+    'wednesday': '3',
+    'thursday': '4',
+    'friday': '5',
+    'saturday': '6'
+  };
+
   // Find the schedule details result set
   let scheduleDetails = null;
   let scheduledPlaylist = null;
@@ -350,15 +361,17 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     let daysArr = [];
     try {
       daysArr = JSON.parse(scheduleDetails.Days);
-      // Convert array elements to lowercase for comparison
-      daysArr = daysArr.map(d => d.toLowerCase());
-      logger.logInfo(`processScheduleDetails() :: Schedule days: ${JSON.stringify(daysArr)}`);
+      logger.logInfo(`processScheduleDetails() :: Schedule days (raw): ${JSON.stringify(daysArr)}`);
     } catch (e) {
       logger.logInfo(`processScheduleDetails() :: Days parse error ${e}`);
     }
 
-    // ✅ Check if today is in scheduled days AND current time is within scheduled time range
-    const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(today);
+    // ✅ FIX: Convert current day name to numeric code for comparison
+    const todayCode = DAY_NAME_TO_CODE[today];
+    logger.logInfo(`processScheduleDetails() :: Today code: ${todayCode}`);
+
+    // ✅ Check if today's numeric code is in the schedule's day array
+    const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(todayCode);
     
     let isWithinTimeRange = false;
     if (scheduleDetails.StartTime && scheduleDetails.EndTime) {
