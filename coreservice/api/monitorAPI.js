@@ -607,7 +607,10 @@ var getMonitorStatusResponse = (functionContext, resolvedResult) => {
       MediaIndex: resolvedResult.mediaIndex,
       TotalMedia: resolvedResult.totalMedia,
       LastUpdate: resolvedResult.receivedAt || lastUpdate.toISOString(),
-      SecondsSinceUpdate: secondsSinceUpdate
+      SecondsSinceUpdate: secondsSinceUpdate,
+      screenState: resolvedResult.screenState,
+      errors: resolvedResult.errors,
+      healthStatus: resolvedResult.healthStatus
     };
   } else {
     response.Error = null;

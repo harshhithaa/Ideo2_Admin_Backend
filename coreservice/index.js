@@ -7,7 +7,6 @@ var bodyParser = require("body-parser");
 var appLib = require("applib");
 var upload = require("./helper/general").getFileUploadConfig;
 var cors = require("cors");
-// NEW:
 var http = require("http");
 var { Server } = require("socket.io");
 
@@ -37,57 +36,90 @@ var io = new Server(server, {
 
 // Store connected monitors: monitorRef -> socket
 global.monitorSockets = new Map();
-// ✅ ADD THIS: Initialize global cache for monitor status
+// Initialize global cache for monitor status
 global.monitorStatusCache = {};
 
 io.on("connection", (socket) => {
-  logger.logInfo(`Socket connected: ${socket.id}`);
+  logger.logInfo(`[Socket] Connected: ${socket.id}`);
 
-  socket.on("monitor_register", (data) => {
-    const { monitorRef } = data || {};
+  // ✅ FIX: Listen for 'register_monitor' (matches TV app)
+  socket.on("register_monitor", (data) => {
+    const { monitorRef, monitorName } = data || {};
+    logger.logInfo(`[Socket] register_monitor received: ${JSON.stringify(data)}`);
+    
     if (monitorRef) {
       global.monitorSockets.set(monitorRef, socket);
-      logger.logInfo(`Monitor registered via socket: ${monitorRef}`);
-      socket.emit("registration_confirmed", { success: true, monitorRef });
+      logger.logInfo(`[Socket] Monitor registered: ${monitorRef} (${monitorName})`);
+      socket.emit("registration_confirmed", { 
+        success: true, 
+        monitorRef,
+        monitorName 
+      });
+    } else {
+      logger.logInfo(`[Socket] Registration failed: No monitorRef provided`);
     }
   });
 
-  // ✅ FIX: Store current server time, not the timestamp from monitor
+  // ✅ KEEP: Handle status updates from TV app
   socket.on("status_response", (data) => {
-    logger.logInfo(`status_response from ${data && data.monitorRef}: ${JSON.stringify(data)}`);
+    logger.logInfo(`[Socket] status_response from ${data?.monitorRef}`);
     
     if (data && data.monitorRef) {
+      // ✅ Store ALL data from TV app (including health fields)
       global.monitorStatusCache[data.monitorRef] = {
-        ...data,
+        ...data, // This includes: currentPlaylist, currentMedia, screenState, errors, healthStatus, etc.
         socketId: socket.id,
-        // ✅ Use current server time instead of monitor's timestamp
         lastUpdated: new Date(),
         receivedAt: new Date().toISOString()
       };
+      
+      logger.logInfo(`[Socket] Status cached for ${data.monitorRef}: ${JSON.stringify({
+        currentPlaylist: data.currentPlaylist,
+        currentMedia: data.currentMedia,
+        healthStatus: data.healthStatus,
+        screenState: data.screenState,
+        errorsCount: data.errors?.length || 0
+      })}`);
+    } else {
+      logger.logInfo(`[Socket] Invalid status_response: ${JSON.stringify(data)}`);
     }
   });
 
-  socket.on("disconnect", () => {
-    logger.logInfo(`Socket disconnected: ${socket.id}`);
+  // ✅ Handle admin requesting status
+  socket.on("request_status", (data) => {
+    const { monitorRef } = data || {};
+    logger.logInfo(`[Socket] Admin requesting status for: ${monitorRef}`);
     
+    if (monitorRef && global.monitorSockets.has(monitorRef)) {
+      const monitorSocket = global.monitorSockets.get(monitorRef);
+      monitorSocket.emit("request_status");
+      logger.logInfo(`[Socket] Status request sent to monitor: ${monitorRef}`);
+    } else {
+      logger.logInfo(`[Socket] Monitor not connected: ${monitorRef}`);
+    }
+  });
+
+  // ✅ FIX: Don't delete cache on disconnect (keep for offline detection)
+  socket.on("disconnect", () => {
+    logger.logInfo(`[Socket] Disconnected: ${socket.id}`);
+    
+    // Remove from active sockets
     for (let [mRef, s] of global.monitorSockets.entries()) {
       if (s.id === socket.id) {
         global.monitorSockets.delete(mRef);
-        logger.logInfo(`Monitor disconnected: ${mRef}`);
+        logger.logInfo(`[Socket] Monitor socket removed: ${mRef}`);
+        
+        // ✅ DON'T delete cache - keep last known state for offline detection
+        // The cache will show 'offline' status based on lastUpdated timestamp
+        logger.logInfo(`[Socket] Keeping status cache for offline detection: ${mRef}`);
         break;
       }
     }
-    
-    Object.keys(global.monitorStatusCache).forEach(monitorRef => {
-      if (global.monitorStatusCache[monitorRef].socketId === socket.id) {
-        delete global.monitorStatusCache[monitorRef];
-        logger.logInfo(`Monitor status cache cleared: ${monitorRef}`);
-      }
-    });
   });
 });
 
-// make io available to other modules if required
+// Make io available to routes (for admin to request status)
+app.set('io', io);
 module.exports.io = io;
 
 startServerProcess(logger);
