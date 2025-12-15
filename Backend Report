@@ -1,370 +1,322 @@
-# Ideogram Production Database - Comprehensive Documentation
-
-**Database Name:** `ideogram_prod`  
-**Report Generated:** December 15, 2025  
-**Total Tables:** 20  
-**Total Stored Procedures:** 24  
-**Total Views:** 0  
-**Total Functions:** 0
-
----
-
-## Table of Contents
-1. [Database Overview](#database-overview)
-2. [Tables Documentation](#tables-documentation)
-3. [Stored Procedures Documentation](#stored-procedures-documentation)
-4. [Relationships & Constraints](#relationships--constraints)
-5. [Database Statistics](#database-statistics)
-
----
-
-## Database Overview
-
-The `ideogram_prod` database is a digital signage management system that handles media content, playlists, schedules, and monitor displays. The system supports:
-
-- **User Management**: Admin users with authentication
-- **Media Management**: Upload and organize media files (images, videos, GIFs)
-- **Playlist Management**: Create and manage media playlists
-- **Schedule Management**: Time-based content scheduling
-- **Monitor Management**: Control and monitor display devices
-- **Device Management**: Track user devices and tokens
-- **Logging**: Request logging and user activity tracking
-
----
-
-## Tables Documentation
-
-### 1. **admin**
-**Purpose:** Stores administrative user accounts
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| AdminRef | varchar(45) | UNI | NO | - | Unique reference ID (UUID) |
-| UserName | varchar(45) | - | YES | - | Admin username |
-| Email | varchar(45) | UNI | YES | - | Unique email address |
-| Phone | varchar(45) | - | YES | - | Contact phone number |
-| Password | varchar(45) | - | YES | - | Password (deprecated) |
-| PasswordHash | longtext | - | YES | - | Hashed password |
-| UserType | int | - | YES | 1 | User type identifier |
-| IsActive | tinyint | - | YES | - | Active status flag |
-| CreatedOn | varchar(45) | - | YES | - | Creation timestamp |
-| UpdatedOn | varchar(45) | - | YES | - | Last update timestamp |
-
-**Statistics:** 9 rows, Last updated: 2023-07-05
-
----
-
-### 2. **media**
-**Purpose:** Stores media files (images, videos, GIFs)
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| MediaRef | varchar(45) | UNI | NO | - | Unique media reference (UUID) |
-| MediaName | varchar(200) | MUL | YES | - | Media file name |
-| MediaPath | longtext | - | YES | - | File storage path/URL |
-| MediaType | varchar(45) | - | YES | - | Type: image, video, gif |
-| MediaDuration | int | - | YES | 0 | Duration in seconds (for videos) |
-| UserId | int | - | YES | - | Owner admin ID |
-| IsActive | int | MUL | YES | 1 | Active status flag |
-| CreatedOn | varchar(45) | MUL | YES | - | Creation timestamp |
-
-**Statistics:** 1,412 rows, Data size: 294KB, Last updated: 2025-12-15
-
----
-
-### 3. **playlists**
-**Purpose:** Defines media playlists
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| PlaylistRef | varchar(45) | - | YES | - | Unique playlist reference (UUID) |
-| Name | varchar(45) | - | YES | - | Playlist name |
-| Description | varchar(45) | - | YES | - | Playlist description |
-| UserId | int | - | YES | - | Owner admin ID |
-| IsActive | int | - | YES | - | Active status flag |
-| CreatedOn | varchar(45) | - | YES | - | Creation timestamp |
-| UpdatedOn | varchar(45) | - | YES | - | Last update timestamp |
-
-**Statistics:** 115 rows, Last updated: 2025-12-09
-
----
-
-### 4. **playlistmedia**
-**Purpose:** Junction table linking playlists to media with ordering and duration
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| PlaylistId | int | - | YES | - | Foreign key to playlists |
-| MediaId | int | MUL, FK | YES | - | Foreign key to media |
-| Priority | int | - | YES | - | Display order/priority |
-| IsActive | int | - | YES | - | Active status flag |
-| Duration | int | - | YES | 10 | Display duration (seconds) |
-| CreatedOn | varchar(45) | - | YES | - | Creation timestamp |
-| UpdatedOn | varchar(45) | - | YES | - | Last update timestamp |
-
-**Foreign Keys:**
-- `MediaId` → `media.Id`
-
-**Statistics:** 1,131 rows, Data size: 114KB, Last updated: 2025-12-09
-
----
-
-### 5. **schedules**
-**Purpose:** Defines time-based scheduling for playlists
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| ScheduleRef | varchar(45) | UNI | NO | - | Unique schedule reference (UUID) |
-| Title | varchar(45) | - | YES | - | Schedule title |
-| Description | longtext | - | YES | - | Schedule description |
-| PlaylistId | int | - | NO | - | Associated playlist ID |
-| MonitorId | int | - | YES | - | Legacy monitor association |
-| UserId | int | - | YES | - | Owner admin ID |
-| IsActive | int | - | YES | - | Active status flag |
-| StartDate | varchar(45) | - | YES | - | Schedule start date |
-| EndDate | varchar(45) | - | YES | - | Schedule end date |
-| StartTime | varchar(45) | - | YES | - | Daily start time |
-| EndTime | varchar(45) | - | YES | - | Daily end time |
-| FixedTimePlayback | int | - | YES | 0 | Fixed time vs range playback |
-| Days | varchar(45) | - | YES | - | Days of week (comma-separated) |
-| CreatedOn | varchar(45) | - | YES | - | Creation timestamp |
-| UpdatedOn | varchar(45) | - | YES | - | Last update timestamp |
-
-**Statistics:** 67 rows, Last updated: 2025-12-15
-
----
-
-### 6. **monitors**
-**Purpose:** Represents physical display monitors/devices
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| MonitorRef | varchar(45) | UNI | NO | - | Unique monitor reference (UUID) |
-| MonitorName | varchar(100) | - | YES | - | Display name |
-| MonitorUser | varchar(45) | UNI | YES | - | Unique login username |
-| Password | varchar(45) | - | YES | - | Monitor login password |
-| Description | longtext | - | YES | - | Monitor description |
-| ScheduleId | int | - | YES | - | Legacy schedule association |
-| DefaultPlaylistId | int | - | YES | - | Default/fallback playlist |
-| UserId | int | - | YES | - | Owner admin ID |
-| IsActive | int | - | YES | - | Active status flag |
-| CreatedOn | varchar(45) | - | YES | - | Creation timestamp |
-| UpdatedOn | varchar(45) | - | YES | - | Last update timestamp |
-| Orientation | varchar(45) | - | NO | - | Display orientation (Portrait/Landscape) |
-
-**Statistics:** 33 rows, Last updated: 2025-12-09
-
----
-
-### 7. **monitorschedule**
-**Purpose:** Junction table for many-to-many relationship between monitors and schedules
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| MonitorId | int | - | YES | - | Foreign key to monitors |
-| ScheduleId | int | - | YES | - | Foreign key to schedules |
-| IsActive | int | - | YES | - | Active status flag |
-
-**Statistics:** 37 rows, Last updated: 2025-12-15
-
-**Note:** This table enables multiple schedules per monitor (many-to-many relationship)
-
----
-
-### 8. **MonitorStatus**
-**Purpose:** Tracks real-time status of monitors
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| MonitorRef | varchar(255) | PRI | NO | - | Monitor reference ID |
-| MonitorName | varchar(255) | - | NO | - | Monitor display name |
-| CurrentPlaylist | varchar(255) | - | YES | 'Default' | Currently playing playlist |
-| PlaylistType | varchar(50) | - | YES | 'Default' | Type of playlist |
-| ScheduleRef | varchar(255) | - | YES | - | Active schedule reference |
-| CurrentMedia | varchar(255) | - | YES | - | Currently playing media |
-| MediaIndex | int | - | YES | 0 | Current media index |
-| TotalMedia | int | - | YES | 0 | Total media in playlist |
-| LastHeartbeat | datetime | MUL | NO | - | Last heartbeat timestamp |
-| UpdatedAt | datetime | - | NO | - | Last update timestamp |
-
-**Statistics:** 0 rows, Created: 2025-12-09
-
----
-
-### 9. **monitor_heartbeat**
-**Purpose:** Logs monitor heartbeat activity
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| MonitorRef | varchar(60) | UNI | NO | - | Monitor reference ID |
-| CurrentlyPlaying | varchar(255) | - | YES | - | Current media playing |
-| PlaylistType | varchar(50) | - | YES | 'Default' | Playlist type |
-| ScheduleRef | varchar(60) | - | YES | - | Schedule reference |
-| Status | varchar(50) | - | YES | 'Healthy' | Monitor health status |
-| LastHeartbeat | datetime | MUL | YES | - | Last heartbeat time |
-| CreatedOn | datetime | - | YES | - | Record creation time |
-
-**Statistics:** 1 row, Last updated: 2025-12-05
-
----
-
-### 10. **userloginlog**
-**Purpose:** Tracks user login sessions and authentication tokens
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| UserId | int | - | NO | - | User ID (admin or monitor) |
-| Token | varchar(36) | MUL | NO | - | Session authentication token (UUID) |
-| UserType | int | - | YES | - | 1=Admin, 2=Monitor |
-| InTime | datetime(6) | - | NO | - | Login timestamp |
-| OutTime | datetime(6) | - | YES | - | Logout timestamp (NULL if active) |
-
-**Statistics:** 1,646 rows, Data size: 180KB, Last updated: 2025-12-15
-
----
-
-### 11. **device**
-**Purpose:** Manages device tokens for push notifications
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| Id | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| UserId | int | - | YES | - | Associated user ID |
-| Token | longtext | - | YES | - | Device FCM/push token |
-| UserType | int | - | YES | - | Type of user |
-| DeviceType | int | - | YES | - | Device type identifier |
-| IsActive | int | - | YES | 1 | Active status flag |
-| CreatedOn | timestamp | - | YES | - | Creation timestamp |
-| UpdatedOn | timestamp | - | YES | - | Last update timestamp |
-
-**Statistics:** 3 rows, Last updated: 2025-12-15
-
----
-
-### 12. **apiuri**
-**Purpose:** Manages API endpoint configurations and authentication requirements
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| URIID | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| URI | varchar(100) | - | NO | - | API endpoint path |
-| AuthRequired | tinyint(1) | - | YES | - | Whether authentication is required |
-| CallerContext | varchar(4) | - | YES | - | Caller context identifier |
-
-**Statistics:** 36 rows, Last updated: 2025-12-09
-
----
-
-### 13. **appsettings**
-**Purpose:** Stores application configuration key-value pairs
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| key | longtext | - | NO | - | Configuration key |
-| value | longtext | - | NO | - | Configuration value |
-
-**Statistics:** 2 rows
-
----
-
-### 14. **requestlog**
-**Purpose:** Logs all API requests and responses for debugging
-
-| Column | Type | Key | Nullable | Default | Description |
-|--------|------|-----|----------|---------|-------------|
-| ID | int | PRI | NO | AUTO_INCREMENT | Primary key |
-| RequestUserID | varchar(45) | - | YES | - | User making request |
-| RequestID | varchar(50) | - | YES | - | Unique request identifier |
-| Headers | longtext | - | YES | - | Request headers (JSON) |
-| AppVersion | varchar(5) | - | YES | - | Application version |
-| RequestText | longtext | - | YES | - | Request payload |
-| ResponseText | longtext | - | YES | - | Response payload |
-| RequestType | varchar(10) | - | YES | - | HTTP method (GET/POST) |
-| Timestamp | varchar(45) | - | YES | - | Request timestamp |
-
-**Statistics:** 0 rows
-
----
-
-### 15. **customer** (Unused)
-**Purpose:** Customer accounts (appears to be legacy/unused)
-
-| Column | Type | Key | Description |
-|--------|------|-----|-------------|
-| Id | int | PRI | Primary key |
-| CustomerRef | varchar(60) | UNI | Unique customer reference |
-| Email | varchar(100) | - | Email address |
-| FirstName | longtext | - | First name |
-| LastName | longtext | - | Last name |
-| DateOfBirth | varchar(45) | - | Date of birth |
-| Phone | varchar(45) | - | Phone number |
-| VerificationStatus | tinyint | - | Verification status |
-| IsActive | tinyint | - | Active flag |
-| IsLoggedIn | tinyint | - | Login status |
-| CreatedOn | timestamp | - | Creation date |
-| UpdatedOn | timestamp | - | Update date |
-| Password | varchar(45) | - | Password |
-
-**Statistics:** 0 rows (unused table)
-
----
-
-### 16. **customeraddress** (Unused)
-**Purpose:** Customer address information (legacy)
-
-**Statistics:** 0 rows (unused table)
-
----
-
-### 17. **packages** (Unused)
-**Purpose:** Service packages (appears to be legacy/unused)
-
-**Statistics:** 0 rows (unused table)
-
----
-
-### 18. **scheduleplaylist** (Unused)
-**Purpose:** Schedule-playlist relationships (legacy, replaced by direct FK)
-
-**Statistics:** 0 rows (unused table)
-
----
-
-### 19. **userpostdetails** (Unused)
-**Purpose:** User post details (legacy/unused)
-
-**Statistics:** 0 rows (unused table)
-
----
-
-### 20. **userposts** (Unused)
-**Purpose:** User posts (legacy/unused)
-
-**Statistics:** 0 rows (unused table)
-
----
-
-## Stored Procedures Documentation
-
-### Authentication & User Management
-
-#### 1. **usp_admin_login**
-**Purpose:** Handles admin user login authentication
-
-**Parameters:**
-- `paramEmail` - Admin email address
-- `paramCurrentTs` - Current timestamp
-
-**Process:**
+================================================================================
+IDEOGRAM PRODUCTION DATABASE - COMPREHENSIVE DOCUMENTATION
+================================================================================
+
+Database Name: ideogram_prod
+Report Generated: December 15, 2025
+Total Tables: 20
+Total Stored Procedures: 24
+Total Views: 0
+Total Functions: 0
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. Database Overview
+2. Tables Documentation
+3. Stored Procedures Documentation
+4. Relationships & Constraints
+5. Database Statistics
+
+================================================================================
+DATABASE OVERVIEW
+================================================================================
+
+The ideogram_prod database is a digital signage management system that handles 
+media content, playlists, schedules, and monitor displays. The system supports:
+
+- User Management: Admin users with authentication
+- Media Management: Upload and organize media files (images, videos, GIFs)
+- Playlist Management: Create and manage media playlists
+- Schedule Management: Time-based content scheduling
+- Monitor Management: Control and monitor display devices
+- Device Management: Track user devices and tokens
+- Logging: Request logging and user activity tracking
+
+================================================================================
+TABLES DOCUMENTATION
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ADMIN
+--------------------------------------------------------------------------------
+Purpose: Stores administrative user accounts
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- AdminRef (varchar(45), UNI): Unique reference ID (UUID)
+- UserName (varchar(45)): Admin username
+- Email (varchar(45), UNI): Unique email address
+- Phone (varchar(45)): Contact phone number
+- Password (varchar(45)): Password (deprecated)
+- PasswordHash (longtext): Hashed password
+- UserType (int, DEFAULT 1): User type identifier
+- IsActive (tinyint): Active status flag
+- CreatedOn (varchar(45)): Creation timestamp
+- UpdatedOn (varchar(45)): Last update timestamp
+
+Statistics: 9 rows, Last updated: 2023-07-05
+
+--------------------------------------------------------------------------------
+2. MEDIA
+--------------------------------------------------------------------------------
+Purpose: Stores media files (images, videos, GIFs)
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- MediaRef (varchar(45), UNI): Unique media reference (UUID)
+- MediaName (varchar(200), MUL): Media file name
+- MediaPath (longtext): File storage path/URL
+- MediaType (varchar(45)): Type: image, video, gif
+- MediaDuration (int, DEFAULT 0): Duration in seconds (for videos)
+- UserId (int): Owner admin ID
+- IsActive (int, MUL, DEFAULT 1): Active status flag
+- CreatedOn (varchar(45), MUL): Creation timestamp
+
+Statistics: 1,412 rows, Data size: 294KB, Last updated: 2025-12-15
+
+--------------------------------------------------------------------------------
+3. PLAYLISTS
+--------------------------------------------------------------------------------
+Purpose: Defines media playlists
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- PlaylistRef (varchar(45)): Unique playlist reference (UUID)
+- Name (varchar(45)): Playlist name
+- Description (varchar(45)): Playlist description
+- UserId (int): Owner admin ID
+- IsActive (int): Active status flag
+- CreatedOn (varchar(45)): Creation timestamp
+- UpdatedOn (varchar(45)): Last update timestamp
+
+Statistics: 115 rows, Last updated: 2025-12-09
+
+--------------------------------------------------------------------------------
+4. PLAYLISTMEDIA
+--------------------------------------------------------------------------------
+Purpose: Junction table linking playlists to media with ordering and duration
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- PlaylistId (int): Foreign key to playlists
+- MediaId (int, MUL, FK): Foreign key to media
+- Priority (int): Display order/priority
+- IsActive (int): Active status flag
+- Duration (int, DEFAULT 10): Display duration (seconds)
+- CreatedOn (varchar(45)): Creation timestamp
+- UpdatedOn (varchar(45)): Last update timestamp
+
+Foreign Keys:
+- MediaId → media.Id
+
+Statistics: 1,131 rows, Data size: 114KB, Last updated: 2025-12-09
+
+--------------------------------------------------------------------------------
+5. SCHEDULES
+--------------------------------------------------------------------------------
+Purpose: Defines time-based scheduling for playlists
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- ScheduleRef (varchar(45), UNI): Unique schedule reference (UUID)
+- Title (varchar(45)): Schedule title
+- Description (longtext): Schedule description
+- PlaylistId (int): Associated playlist ID
+- MonitorId (int): Legacy monitor association
+- UserId (int): Owner admin ID
+- IsActive (int): Active status flag
+- StartDate (varchar(45)): Schedule start date
+- EndDate (varchar(45)): Schedule end date
+- StartTime (varchar(45)): Daily start time
+- EndTime (varchar(45)): Daily end time
+- FixedTimePlayback (int, DEFAULT 0): Fixed time vs range playback
+- Days (varchar(45)): Days of week (comma-separated)
+- CreatedOn (varchar(45)): Creation timestamp
+- UpdatedOn (varchar(45)): Last update timestamp
+
+Statistics: 67 rows, Last updated: 2025-12-15
+
+--------------------------------------------------------------------------------
+6. MONITORS
+--------------------------------------------------------------------------------
+Purpose: Represents physical display monitors/devices
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- MonitorRef (varchar(45), UNI): Unique monitor reference (UUID)
+- MonitorName (varchar(100)): Display name
+- MonitorUser (varchar(45), UNI): Unique login username
+- Password (varchar(45)): Monitor login password
+- Description (longtext): Monitor description
+- ScheduleId (int): Legacy schedule association
+- DefaultPlaylistId (int): Default/fallback playlist
+- UserId (int): Owner admin ID
+- IsActive (int): Active status flag
+- CreatedOn (varchar(45)): Creation timestamp
+- UpdatedOn (varchar(45)): Last update timestamp
+- Orientation (varchar(45)): Display orientation (Portrait/Landscape)
+
+Statistics: 33 rows, Last updated: 2025-12-09
+
+--------------------------------------------------------------------------------
+7. MONITORSCHEDULE
+--------------------------------------------------------------------------------
+Purpose: Junction table for many-to-many relationship between monitors and 
+schedules
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- MonitorId (int): Foreign key to monitors
+- ScheduleId (int): Foreign key to schedules
+- IsActive (int): Active status flag
+
+Statistics: 37 rows, Last updated: 2025-12-15
+
+Note: This table enables multiple schedules per monitor (many-to-many 
+relationship)
+
+--------------------------------------------------------------------------------
+8. MONITORSTATUS
+--------------------------------------------------------------------------------
+Purpose: Tracks real-time status of monitors
+
+Columns:
+- MonitorRef (varchar(255), PRI): Monitor reference ID
+- MonitorName (varchar(255)): Monitor display name
+- CurrentPlaylist (varchar(255), DEFAULT 'Default'): Currently playing playlist
+- PlaylistType (varchar(50), DEFAULT 'Default'): Type of playlist
+- ScheduleRef (varchar(255)): Active schedule reference
+- CurrentMedia (varchar(255)): Currently playing media
+- MediaIndex (int, DEFAULT 0): Current media index
+- TotalMedia (int, DEFAULT 0): Total media in playlist
+- LastHeartbeat (datetime, MUL): Last heartbeat timestamp
+- UpdatedAt (datetime): Last update timestamp
+
+Statistics: 0 rows, Created: 2025-12-09
+
+--------------------------------------------------------------------------------
+9. MONITOR_HEARTBEAT
+--------------------------------------------------------------------------------
+Purpose: Logs monitor heartbeat activity
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- MonitorRef (varchar(60), UNI): Monitor reference ID
+- CurrentlyPlaying (varchar(255)): Current media playing
+- PlaylistType (varchar(50), DEFAULT 'Default'): Playlist type
+- ScheduleRef (varchar(60)): Schedule reference
+- Status (varchar(50), DEFAULT 'Healthy'): Monitor health status
+- LastHeartbeat (datetime, MUL): Last heartbeat time
+- CreatedOn (datetime): Record creation time
+
+Statistics: 1 row, Last updated: 2025-12-05
+
+--------------------------------------------------------------------------------
+10. USERLOGINLOG
+--------------------------------------------------------------------------------
+Purpose: Tracks user login sessions and authentication tokens
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- UserId (int): User ID (admin or monitor)
+- Token (varchar(36), MUL): Session authentication token (UUID)
+- UserType (int): 1=Admin, 2=Monitor
+- InTime (datetime(6)): Login timestamp
+- OutTime (datetime(6)): Logout timestamp (NULL if active)
+
+Statistics: 1,646 rows, Data size: 180KB, Last updated: 2025-12-15
+
+--------------------------------------------------------------------------------
+11. DEVICE
+--------------------------------------------------------------------------------
+Purpose: Manages device tokens for push notifications
+
+Columns:
+- Id (int, PRI, AUTO_INCREMENT): Primary key
+- UserId (int): Associated user ID
+- Token (longtext): Device FCM/push token
+- UserType (int): Type of user
+- DeviceType (int): Device type identifier
+- IsActive (int, DEFAULT 1): Active status flag
+- CreatedOn (timestamp): Creation timestamp
+- UpdatedOn (timestamp): Last update timestamp
+
+Statistics: 3 rows, Last updated: 2025-12-15
+
+--------------------------------------------------------------------------------
+12. APIURI
+--------------------------------------------------------------------------------
+Purpose: Manages API endpoint configurations and authentication requirements
+
+Columns:
+- URIID (int, PRI, AUTO_INCREMENT): Primary key
+- URI (varchar(100)): API endpoint path
+- AuthRequired (tinyint(1)): Whether authentication is required
+- CallerContext (varchar(4)): Caller context identifier
+
+Statistics: 36 rows, Last updated: 2025-12-09
+
+--------------------------------------------------------------------------------
+13. APPSETTINGS
+--------------------------------------------------------------------------------
+Purpose: Stores application configuration key-value pairs
+
+Columns:
+- key (longtext): Configuration key
+- value (longtext): Configuration value
+
+Statistics: 2 rows
+
+--------------------------------------------------------------------------------
+14. REQUESTLOG
+--------------------------------------------------------------------------------
+Purpose: Logs all API requests and responses for debugging
+
+Columns:
+- ID (int, PRI, AUTO_INCREMENT): Primary key
+- RequestUserID (varchar(45)): User making request
+- RequestID (varchar(50)): Unique request identifier
+- Headers (longtext): Request headers (JSON)
+- AppVersion (varchar(5)): Application version
+- RequestText (longtext): Request payload
+- ResponseText (longtext): Response payload
+- RequestType (varchar(10)): HTTP method (GET/POST)
+- Timestamp (varchar(45)): Request timestamp
+
+Statistics: 0 rows
+
+--------------------------------------------------------------------------------
+15-20. UNUSED/LEGACY TABLES
+--------------------------------------------------------------------------------
+
+The following tables have 0 rows and appear to be legacy/unused:
+- customer: Customer accounts (legacy/unused)
+- customeraddress: Customer address information (legacy)
+- packages: Service packages (legacy/unused)
+- scheduleplaylist: Schedule-playlist relationships (legacy, replaced by 
+  direct FK)
+- userpostdetails: User post details (legacy/unused)
+- userposts: User posts (legacy/unused)
+
+================================================================================
+STORED PROCEDURES DOCUMENTATION
+================================================================================
+
+--------------------------------------------------------------------------------
+AUTHENTICATION & USER MANAGEMENT
+--------------------------------------------------------------------------------
+
+1. usp_admin_login
+------------------
+Purpose: Handles admin user login authentication
+
+Parameters:
+- paramEmail: Admin email address
+- paramCurrentTs: Current timestamp
+
+Process:
 1. Validates admin user by email
 2. Expires any existing active sessions
 3. Generates new authentication token (UUID)
@@ -372,773 +324,818 @@ The `ideogram_prod` database is a digital signage management system that handles
 5. Deactivates previous device tokens
 6. Returns: AuthToken, AdminReference, UserType
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
+Error States:
+- SQLSTATE 10005: Invalid User
 
----
+2. usp_fetch_admin_login_details
+---------------------------------
+Purpose: Retrieves admin login credentials for authentication
 
-#### 2. **usp_fetch_admin_login_details**
-**Purpose:** Retrieves admin login credentials for authentication
+Parameters:
+- paramEmail: Admin email address
 
-**Parameters:**
-- `paramEmail` - Admin email address
-
-**Returns:**
+Returns:
 - Admin ID, AdminRef, Email, PasswordHash
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
+Error States:
+- SQLSTATE 10005: Invalid User
 
----
+3. usp_monitor_login
+--------------------
+Purpose: Authenticates monitor devices
 
-#### 3. **usp_monitor_login**
-**Purpose:** Authenticates monitor devices
+Parameters:
+- paramMonitorUser: Monitor username
+- paramPassword: Monitor password
+- paramCurrentTs: Current timestamp
 
-**Parameters:**
-- `paramMonitorUser` - Monitor username
-- `paramPassword` - Monitor password
-- `paramCurrentTs` - Current timestamp
-
-**Process:**
+Process:
 1. Validates monitor credentials
 2. Performs binary password comparison
 3. Expires previous sessions
 4. Creates new session with UUID token
 5. Returns: MonitorRef, MonitorName, Token
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
-- `SQLSTATE 10006`: Invalid Phone or Password
+Error States:
+- SQLSTATE 10005: Invalid User
+- SQLSTATE 10006: Invalid Phone or Password
 
----
+4. usp_user_logout
+------------------
+Purpose: Handles user logout for both admin and monitor users
 
-#### 4. **usp_user_logout**
-**Purpose:** Handles user logout for both admin and monitor users
+Parameters:
+- paramUserRef: User reference (AdminRef or MonitorRef)
+- paramUserType: User type (1=Admin, 2=Monitor)
+- paramCurrentTs: Current timestamp
 
-**Parameters:**
-- `paramUserRef` - User reference (AdminRef or MonitorRef)
-- `paramUserType` - User type (1=Admin, 2=Monitor)
-- `paramCurrentTs` - Current timestamp
-
-**Process:**
+Process:
 1. Identifies user ID from reference
 2. Deactivates all device tokens
 3. Sets logout timestamp in userloginlog
 4. Closes active session
 
----
+5. usp_validate_request
+-----------------------
+Purpose: Validates API requests and authentication tokens
 
-#### 5. **usp_validate_request**
-**Purpose:** Validates API requests and authentication tokens
+Parameters:
+- paramApiuri: API endpoint URI
+- paramAuthToken: Authentication token
 
-**Parameters:**
-- `paramApiuri` - API endpoint URI
-- `paramAuthToken` - Authentication token
-
-**Returns:**
+Returns:
 - UserType, UserRef, UserID
 
-**Process:**
+Process:
 1. Validates API URI exists
 2. Checks if authentication is required
 3. Validates auth token if required
 4. Returns user context information
 
-**Error States:**
-- `SQLSTATE 10001`: Invalid Request URL
-- `SQLSTATE 10002`: Invalid User Credentials
+Error States:
+- SQLSTATE 10001: Invalid Request URL
+- SQLSTATE 10002: Invalid User Credentials
 
----
+6. usp_register_device_token
+-----------------------------
+Purpose: Registers device FCM/push notification tokens
 
-#### 6. **usp_register_device_token**
-**Purpose:** Registers device FCM/push notification tokens
+Parameters:
+- paramUserRef: Admin reference
+- paramDeviceToken: Device token
+- paramAppType: Application type
+- paramUserType: User type
+- paramCurrentTs: Current timestamp
 
-**Parameters:**
-- `paramUserRef` - Admin reference
-- `paramDeviceToken` - Device token
-- `paramAppType` - Application type
-- `paramUserType` - User type
-- `paramCurrentTs` - Current timestamp
-
-**Process:**
+Process:
 1. Resolves user ID from reference
 2. Deactivates previous device tokens
 3. Inserts new active device token
 
----
+7. usp_save_system_users
+------------------------
+Purpose: Creates or updates admin users
 
-#### 7. **usp_save_system_users**
-**Purpose:** Creates or updates admin users
+Parameters:
+- paramAdminRef: Admin reference (NULL for new users)
+- paramUserName: Username
+- paramEmail: Email address
+- paramPhone: Phone number
+- paramPassword: Plain password (deprecated)
+- paramPasswordHash: Hashed password
+- paramIsActive: Active status
+- paramCurrentTs: Current timestamp
 
-**Parameters:**
-- `paramAdminRef` - Admin reference (NULL for new users)
-- `paramUserName` - Username
-- `paramEmail` - Email address
-- `paramPhone` - Phone number
-- `paramPassword` - Plain password (deprecated)
-- `paramPasswordHash` - Hashed password
-- `paramIsActive` - Active status
-- `paramCurrentTs` - Current timestamp
-
-**Process:**
-- **Create:** Generates new UUID AdminRef, inserts admin record
-- **Update:** Updates existing admin details
+Process:
+- Create: Generates new UUID AdminRef, inserts admin record
+- Update: Updates existing admin details
 - Returns: AdminRef
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid Admin Reference
+Error States:
+- SQLSTATE 10005: Invalid Admin Reference
 
----
+--------------------------------------------------------------------------------
+MEDIA MANAGEMENT
+--------------------------------------------------------------------------------
 
-### Media Management
+8. usp_save_media
+-----------------
+Purpose: Uploads and saves media files with metadata
 
-#### 8. **usp_save_media**
-**Purpose:** Uploads and saves media files with metadata
+Parameters:
+- paramMediaJSON: JSON containing:
+  - userRef: Admin reference
+  - currentTs: Timestamp
+  - fileUploadDetails[]: Array of file objects:
+    - fileName: File name
+    - fileMimetype: MIME type
+    - fileUrl: Storage URL/path
+    - fileDuration: Video duration (optional)
 
-**Parameters:**
-- `paramMediaJSON` - JSON containing:
-  - `userRef` - Admin reference
-  - `currentTs` - Timestamp
-  - `fileUploadDetails[]` - Array of file objects:
-    - `fileName` - File name
-    - `fileMimetype` - MIME type
-    - `fileUrl` - Storage URL/path
-    - `fileDuration` - Video duration (optional)
-
-**Process:**
+Process:
 1. Validates admin user
 2. Iterates through uploaded files
 3. Detects media type:
-   - GIF: `image/gif` or `.gif` extension
-   - Video: `video/*` MIME or video extensions
-   - Image: `image/*` MIME or default
+   - GIF: image/gif or .gif extension
+   - Video: video/* MIME or video extensions
+   - Image: image/* MIME or default
 4. Generates UUID for each media file
 5. Inserts media records with metadata
 6. Returns all user's media
 
-**Media Type Detection Logic:**
-```
+Media Type Detection Logic:
 IF mimetype = 'image/gif' OR filename ends with .gif → 'gif'
 ELSEIF mimetype starts with 'video/' OR video extension → 'video'
 ELSEIF mimetype starts with 'image/' → 'image'
 ELSE → 'image' (default)
-```
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
+Error States:
+- SQLSTATE 10005: Invalid User
 
----
+9. usp_fetch_media
+------------------
+Purpose: Retrieves specific media details
 
-#### 9. **usp_fetch_media**
-**Purpose:** Retrieves specific media details
+Parameters:
+- paramMediaRef: Media reference UUID
 
-**Parameters:**
-- `paramMediaRef` - Media reference UUID
+Returns: All media columns for the specified media
 
-**Returns:** All media columns for the specified media
+--------------------------------------------------------------------------------
+PLAYLIST MANAGEMENT
+--------------------------------------------------------------------------------
 
----
+10. usp_save_playlist
+---------------------
+Purpose: Creates or updates playlists with media associations
 
-### Playlist Management
+Parameters:
+- paramPlaylistJSON: JSON containing:
+  - playlistRef: Playlist reference (NULL for new)
+  - userRef: Admin reference
+  - playlistName: Playlist name
+  - description: Description
+  - isActive: Active status
+  - currentTs: Timestamp
+  - playlist[]: Array of media items:
+    - MediaRef: Media reference
+    - IsActive: Active flag
+    - Duration: Display duration (seconds, NULL for videos)
 
-#### 10. **usp_save_playlist**
-**Purpose:** Creates or updates playlists with media associations
-
-**Parameters:**
-- `paramPlaylistJSON` - JSON containing:
-  - `playlistRef` - Playlist reference (NULL for new)
-  - `userRef` - Admin reference
-  - `playlistName` - Playlist name
-  - `description` - Description
-  - `isActive` - Active status
-  - `currentTs` - Timestamp
-  - `playlist[]` - Array of media items:
-    - `MediaRef` - Media reference
-    - `IsActive` - Active flag
-    - `Duration` - Display duration (seconds, NULL for videos)
-
-**Process:**
+Process:
 1. Validates user and resolves playlist ID
 2. Creates new playlist if doesn't exist (generates UUID)
 3. Updates playlist metadata
 4. Deactivates all existing playlist media
 5. Iterates through new media list:
    - Detects media type (video vs image)
-   - For **videos**: Sets Duration = NULL (UI shows "--")
-   - For **images**: Uses provided duration or defaults to 10s (max 60s)
+   - For videos: Sets Duration = NULL (UI shows "--")
+   - For images: Uses provided duration or defaults to 10s (max 60s)
    - Inserts or reactivates media associations with priority ordering
 6. Returns: PlaylistRef, Name, Description, UserId, IsActive
 
-**Duration Handling:**
-- Videos: `Duration = NULL` (actual video duration from media table)
-- Images: `Duration = 10-60 seconds` (user-specified or default 10s)
+Duration Handling:
+- Videos: Duration = NULL (actual video duration from media table)
+- Images: Duration = 10-60 seconds (user-specified or default 10s)
 - Invalid/missing values: Default to 10s
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User or Invalid Media Reference
+Error States:
+- SQLSTATE 10005: Invalid User or Invalid Media Reference
 
----
+--------------------------------------------------------------------------------
+SCHEDULE MANAGEMENT
+--------------------------------------------------------------------------------
 
-### Schedule Management
+11. usp_save_schedule
+---------------------
+Purpose: Creates or updates schedules with time-based rules
 
-#### 11. **usp_save_schedule**
-**Purpose:** Creates or updates schedules with time-based rules
+Parameters:
+- paramScheduleJSON: JSON containing:
+  - scheduleRef: Schedule reference (NULL for new)
+  - userRef: Admin reference
+  - scheduleTitle: Schedule title
+  - description: Description
+  - playlistRef: Playlist reference
+  - monitorRef: Monitor reference
+  - fixedTimePlayback: 0=Range, 1=Fixed time
+  - isActive: Active status
+  - currentTs: Timestamp
+  - schedule object:
+    - StartDate: Schedule start date
+    - EndDate: Schedule end date
+    - StartTime: Daily start time
+    - EndTime: Daily end time
+    - Days: Days of week (comma-separated)
 
-**Parameters:**
-- `paramScheduleJSON` - JSON containing:
-  - `scheduleRef` - Schedule reference (NULL for new)
-  - `userRef` - Admin reference
-  - `scheduleTitle` - Schedule title
-  - `description` - Description
-  - `playlistRef` - Playlist reference
-  - `monitorRef` - Monitor reference
-  - `fixedTimePlayback` - 0=Range, 1=Fixed time
-  - `isActive` - Active status
-  - `currentTs` - Timestamp
-  - `schedule` object:
-    - `StartDate` - Schedule start date
-    - `EndDate` - Schedule end date
-    - `StartTime` - Daily start time
-    - `EndTime` - Daily end time
-    - `Days` - Days of week (comma-separated)
-
-**Process:**
+Process:
 1. Validates user, playlist, and monitor
 2. Creates new schedule if doesn't exist (generates UUID)
 3. Updates schedule details and time rules
 4. Associates schedule with monitor (legacy ScheduleId field)
 5. Returns: Complete schedule details with related names
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User or Invalid Playlist
+Error States:
+- SQLSTATE 10005: Invalid User or Invalid Playlist
 
----
+--------------------------------------------------------------------------------
+MONITOR MANAGEMENT
+--------------------------------------------------------------------------------
 
-### Monitor Management
+12. usp_save_monitor
+--------------------
+Purpose: Creates or updates monitor displays with schedule associations
 
-#### 12. **usp_save_monitor**
-**Purpose:** Creates or updates monitor displays with schedule associations
+Parameters:
+- paramMonitorJSON: JSON containing:
+  - monitorRef: Monitor reference (NULL for new)
+  - userRef: Admin reference
+  - monitorName: Monitor name
+  - description: Description
+  - defaultPlaylistRef: Default playlist reference
+  - orientation: Portrait/Landscape
+  - isActive: Active status
+  - currentTs: Timestamp
+  - schedules[]: Array of schedule associations:
+    - ScheduleRef: Schedule reference
+    - IsActive: Active flag
 
-**Parameters:**
-- `paramMonitorJSON` - JSON containing:
-  - `monitorRef` - Monitor reference (NULL for new)
-  - `userRef` - Admin reference
-  - `monitorName` - Monitor name
-  - `description` - Description
-  - `defaultPlaylistRef` - Default playlist reference
-  - `orientation` - Portrait/Landscape
-  - `isActive` - Active status
-  - `currentTs` - Timestamp
-  - `schedules[]` - Array of schedule associations:
-    - `ScheduleRef` - Schedule reference
-    - `IsActive` - Active flag
-
-**Process:**
+Process:
 1. Validates user and default playlist
-2. **Create Mode:**
+2. Create Mode:
    - Generates new UUID for monitor
    - Inserts monitor with default playlist
    - ScheduleId set to 0 (legacy field)
-3. **Update Mode:**
+3. Update Mode:
    - Updates monitor details
    - Deletes ALL existing schedule associations
-4. **Both Modes:**
+4. Both Modes:
    - Iterates through schedules array
    - Validates each schedule reference
    - Inserts new monitorschedule records for active schedules
 5. Commits transaction before final SELECT
 6. Returns: Monitor details (MonitorRef, Name, Description, etc.)
 
-**Key Features:**
-- Many-to-many monitor-schedule relationship via `monitorschedule` table
-- Legacy `ScheduleId` field kept for backward compatibility (set to 0)
+Key Features:
+- Many-to-many monitor-schedule relationship via monitorschedule table
+- Legacy ScheduleId field kept for backward compatibility (set to 0)
 - Full schedule replacement on update (delete + re-insert)
 
-**Error States:**
-- `SQLSTATE 10004`: Invalid User
-- `SQLSTATE 10007`: Invalid Playlist
-- `SQLSTATE 10008`: Invalid Schedule Reference
+Error States:
+- SQLSTATE 10004: Invalid User
+- SQLSTATE 10007: Invalid Playlist
+- SQLSTATE 10008: Invalid Schedule Reference
 
----
+13. usp_fetch_monitor_details
+------------------------------
+Purpose: Retrieves monitor configuration and determines active playlist based 
+on schedules
 
-#### 13. **usp_fetch_monitor_details**
-**Purpose:** Retrieves monitor configuration and determines active playlist based on schedules
+Parameters:
+- paramMonitorRef: Monitor reference UUID
 
-**Parameters:**
-- `paramMonitorRef` - Monitor reference UUID
-
-**Returns:** Multiple result sets:
+Returns: Multiple result sets:
 1. Monitor details (MonitorRef, MonitorName, DefaultPlaylistId, Orientation)
 2. Active playlist media (if schedule is active) OR default playlist media
 3. Active schedule details (if applicable)
 
-**Complex Logic:**
+Complex Logic:
 1. Validates monitor exists
-2. Iterates through all associated schedules (via `monitorschedule`)
+2. Iterates through all associated schedules (via monitorschedule)
 3. For each schedule, checks:
-   - **FixedTimePlayback = 0** (Range mode):
+   - FixedTimePlayback = 0 (Range mode):
      - Active if: current date/time within range
-   - **FixedTimePlayback = 1** (Fixed mode):
+   - FixedTimePlayback = 1 (Fixed mode):
      - Active if: current date AND current time within range
 4. If schedule is active:
-   - Returns scheduled playlist media with **Duration** from `playlistmedia`
+   - Returns scheduled playlist media with Duration from playlistmedia
    - Returns schedule details
    - Returns default playlist media (fallback)
 5. If no active schedule:
    - Returns only default playlist media
 
-**Returned Media Fields:**
-- `MediaRef`, `MediaId`, `MediaName`, `MediaPath`, `MediaType`
-- `MediaDuration` - From media table (video duration)
-- `Duration` - From playlistmedia table (display duration, NULL for videos)
-- `Priority` - Display order
+Returned Media Fields:
+- MediaRef, MediaId, MediaName, MediaPath, MediaType
+- MediaDuration: From media table (video duration)
+- Duration: From playlistmedia table (display duration, NULL for videos)
+- Priority: Display order
 
-**Timezone:** Asia/Kolkata
+Timezone: Asia/Kolkata
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User (Monitor)
+Error States:
+- SQLSTATE 10005: Invalid User (Monitor)
 
----
+14. usp_update_all_monitors
+----------------------------
+Purpose: Bulk updates default playlist for multiple monitors
 
-#### 14. **usp_update_all_monitors**
-**Purpose:** Bulk updates default playlist for multiple monitors
+Parameters:
+- paramPlaylistRef: Target playlist reference
+- paramMonitorList: JSON array of monitor references
 
-**Parameters:**
-- `paramPlaylistRef` - Target playlist reference
-- `paramMonitorList` - JSON array of monitor references
-
-**Process:**
+Process:
 1. Resolves playlist ID from reference
 2. Iterates through monitor list
 3. Updates each monitor's DefaultPlaylistId
 
----
+--------------------------------------------------------------------------------
+COMPONENT LISTING & DETAILS
+--------------------------------------------------------------------------------
 
-### Component Listing & Details
+15. usp_get_admin_components
+-----------------------------
+Purpose: Retrieves all components for an admin user (media, playlists, 
+schedules, monitors)
 
-#### 15. **usp_get_admin_components**
-**Purpose:** Retrieves all components for an admin user (media, playlists, schedules, monitors)
+Parameters:
+- paramAdminRef: Admin reference UUID
+- paramComponentType: Component type:
+  - 1 = Media
+  - 2 = Playlist
+  - 3 = Schedule
+  - 4 = Monitor
 
-**Parameters:**
-- `paramAdminRef` - Admin reference UUID
-- `paramComponentType` - Component type:
-  - `1` = Media
-  - `2` = Playlist
-  - `3` = Schedule
-  - `4` = Monitor
+Returns by Component Type:
 
-**Returns by Component Type:**
-
-**Media (1):**
+Media (1):
 - All active media for the user
 - Ordered by Id DESC
 
-**Playlist (2):**
+Playlist (2):
 - All active playlists for the user
 - Associated playlist media with:
   - Media details (MediaRef, MediaPath, MediaName, MediaType)
-  - **Duration** field from playlistmedia (NULL for videos, seconds for images)
+  - Duration field from playlistmedia (NULL for videos, seconds for images)
   - Priority ordering
 
-**Schedule (3):**
+Schedule (3):
 - All active schedules with:
   - Associated playlist details
   - Associated monitor details
-  - Time rules (StartDate, EndDate, StartTime, EndTime, Days, FixedTimePlayback)
+  - Time rules (StartDate, EndDate, StartTime, EndTime, Days, 
+    FixedTimePlayback)
 
-**Monitor (4):**
+Monitor (4):
 - All active monitors with:
   - Default playlist details
   - Legacy schedule details (from ScheduleId field)
   - Orientation
-- **Second result set:** ALL schedule associations from `monitorschedule` table:
+- Second result set: ALL schedule associations from monitorschedule table:
   - MonitorId, ScheduleId, ScheduleRef, Title
   - Time details (StartDate, EndDate, StartTime, EndTime, Days)
   - Active status
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
+Error States:
+- SQLSTATE 10005: Invalid User
 
----
+16. usp_list_admin_components
+------------------------------
+Purpose: Paginated listing of admin components with filtering
 
-#### 16. **usp_list_admin_components**
-**Purpose:** Paginated listing of admin components with filtering
+Parameters:
+- paramComponentType: Component type (1-4)
+- paramPageNumber: Page number (default: 1)
+- paramPageSize: Items per page (default: 12)
+- paramSearchText: Search filter (optional)
+- paramMediaType: Media type filter: 'image', 'video', 'gif' (optional)
+- paramUserId: User ID filter (optional)
 
-**Parameters:**
-- `paramComponentType` - Component type (1-4)
-- `paramPageNumber` - Page number (default: 1)
-- `paramPageSize` - Items per page (default: 12)
-- `paramSearchText` - Search filter (optional)
-- `paramMediaType` - Media type filter: 'image', 'video', 'gif' (optional)
-- `paramUserId` - User ID filter (optional)
+Returns:
+Each result includes TotalRecords field for pagination
 
-**Returns:**
-Each result includes `TotalRecords` field for pagination
-
-**Media (1):**
+Media (1):
 - Paginated media list (ACTIVE ONLY with explicit filtering)
 - Filters: Name search, media type, user ID
 - Ordered by Id DESC
 
-**Playlist (2):**
+Playlist (2):
 - Paginated playlists (active only)
 - Associated playlist media for current page with:
-  - **Duration** field from playlistmedia
+  - Duration field from playlistmedia
   - Priority ordering
 - Filters: Name search, user ID
 
-**Schedule (3):**
+Schedule (3):
 - Paginated schedules (active only)
 - With playlist and monitor details
 - Filters: Title search, user ID
 
-**Monitor (4):**
+Monitor (4):
 - Paginated monitors (active only)
 - With default playlist and legacy schedule info
-- **Second result set:** ALL schedule associations for current page monitors:
-  - From `monitorschedule` table (many-to-many relationships)
+- Second result set: ALL schedule associations for current page monitors:
+  - From monitorschedule table (many-to-many relationships)
   - Includes time details and active status
 - Filters: Name search, user ID
 
-**Media Type Filter Logic:**
-```sql
+Media Type Filter Logic:
 (paramMediaType = 'gif' AND MediaType = 'gif') OR
 (paramMediaType = 'video' AND MediaType = 'video') OR
 (paramMediaType = 'image' AND MediaType = 'image')
-```
 
----
+17. usp_get_admin_components_details
+-------------------------------------
+Purpose: Get detailed information for a specific component or paginated 
+playlist listing
 
-#### 17. **usp_get_admin_components_details**
-**Purpose:** Get detailed information for a specific component or paginated playlist listing
+Parameters:
+- paramComponentType: Component type (1-4)
+- paramComponentRef: Component reference (NULL for playlist pagination)
+- paramPageNumber: Page number for pagination
+- paramPageSize: Items per page
+- paramUserId: User ID for filtering
+- paramIsActive: Active status filter
+- paramSearchText: Search text filter
 
-**Parameters:**
-- `paramComponentType` - Component type (1-4)
-- `paramComponentRef` - Component reference (NULL for playlist pagination)
-- `paramPageNumber` - Page number for pagination
-- `paramPageSize` - Items per page
-- `paramUserId` - User ID for filtering
-- `paramIsActive` - Active status filter
-- `paramSearchText` - Search text filter
+Special Features:
 
-**Special Features:**
-
-**Playlist Pagination Mode** (when `paramComponentRef` IS NULL):
+Playlist Pagination Mode (when paramComponentRef IS NULL):
 1. Creates temporary table for paginated playlist IDs
 2. Calculates total count with filters
-3. Returns paginated playlists with `TotalRecords`
+3. Returns paginated playlists with TotalRecords
 4. Returns associated media for returned playlists only
-5. Includes **Duration** field from playlistmedia
+5. Includes Duration field from playlistmedia
 6. Cleans up temporary table
 
-**Single Component Mode** (when `paramComponentRef` provided):
+Single Component Mode (when paramComponentRef provided):
 - Returns detailed component information
 - For playlists: includes all associated media with Duration field
 - For schedules: includes associated monitors
 - For monitors: includes orientation and SlideTime (legacy)
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid Component Reference
+Error States:
+- SQLSTATE 10005: Invalid Component Reference
 
----
+18. usp_get_admin_components_details_v2
+----------------------------------------
+Purpose: Enhanced version with pagination for component associations 
+(currently unused)
 
-#### 18. **usp_get_admin_components_details_v2**
-**Purpose:** Enhanced version with pagination for component associations (currently unused)
+Note: This appears to be a newer version with improved pagination logic but 
+may not be actively used in the current system.
 
-**Note:** This appears to be a newer version with improved pagination logic but may not be actively used in the current system.
+19. usp_list_admin_components_optimized
+----------------------------------------
+Purpose: Performance-optimized version of component listing
 
----
-
-#### 19. **usp_list_admin_components_optimized**
-**Purpose:** Performance-optimized version of component listing
-
-**Key Optimization:**
-- Only calculates `TotalRecords` on first page (paramPageNumber = 1)
-- Returns `-1` for TotalRecords on subsequent pages
+Key Optimization:
+- Only calculates TotalRecords on first page (paramPageNumber = 1)
+- Returns -1 for TotalRecords on subsequent pages
 - Frontend should cache and reuse the count
 - Eliminates expensive COUNT(*) queries on every page
 
-**Note:** Currently only implements Media type, other types return placeholder messages
+Note: Currently only implements Media type, other types return placeholder 
+messages
 
----
+--------------------------------------------------------------------------------
+COMPONENT DELETION & VALIDATION
+--------------------------------------------------------------------------------
 
-### Component Deletion & Validation
+20. usp_delete_admin_components
+--------------------------------
+Purpose: Soft-deletes components (sets IsActive=0) with special handling for 
+schedules
 
-#### 20. **usp_delete_admin_components**
-**Purpose:** Soft-deletes components (sets IsActive=0) with special handling for schedules
+Parameters:
+- paramAdminRef: Admin reference
+- paramComponentType: Component type (1-4)
+- paramComponentList: JSON array of component references
 
-**Parameters:**
-- `paramAdminRef` - Admin reference
-- `paramComponentType` - Component type (1-4)
-- `paramComponentList` - JSON array of component references
+Process by Type:
 
-**Process by Type:**
+Media (1): Sets IsActive=0 for specified media
 
-**Media (1):** Sets `IsActive=0` for specified media
+Playlist (2): Sets IsActive=0 for specified playlists
 
-**Playlist (2):** Sets `IsActive=0` for specified playlists
-
-**Schedule (3):** **HARD DELETE** - Actually removes records from database
-- Supports both `ScheduleRef` and `Id` for flexibility
+Schedule (3): HARD DELETE - Actually removes records from database
+- Supports both ScheduleRef and Id for flexibility
 - Returns count of affected rows
-- **Note:** This is the only component type that performs actual deletion
+- Note: This is the only component type that performs actual deletion
 
-**Monitor (4):** Sets `IsActive=0` for specified monitors
+Monitor (4): Sets IsActive=0 for specified monitors
 
-**Returns:**
-- `affectedRows` - Number of records modified/deleted
-- `processedCount` - Number of items in the list
+Returns:
+- affectedRows: Number of records modified/deleted
+- processedCount: Number of items in the list
 
-**Error States:**
-- `SQLSTATE 10005`: Invalid User
+Error States:
+- SQLSTATE 10005: Invalid User
 
----
+21. usp_validate_delete_admin_components
+-----------------------------------------
+Purpose: Validates if components can be safely deleted by checking active 
+dependencies
 
-#### 21. **usp_validate_delete_admin_components**
-**Purpose:** Validates if components can be safely deleted by checking active dependencies
+Parameters:
+- paramAdminRef: Admin reference
+- paramComponentType: Component type (1-4)
+- paramComponentList: JSON array of component references
 
-**Parameters:**
-- `paramAdminRef` - Admin reference
-- `paramComponentType` - Component type (1-4)
-- `paramComponentList` - JSON array of component references
+Process:
+Creates temporary table activeComponents to track dependencies
 
-**Process:**
-Creates temporary table `activeComponents` to track dependencies
-
-**Media (1) - Checks:**
+Media (1) - Checks:
 - If media is used in any active playlists
-- Returns: ComponentID, ComponentName, ActiveInstances, PlaylistName (comma-separated)
+- Returns: ComponentID, ComponentName, ActiveInstances, PlaylistName 
+  (comma-separated)
 
-**Playlist (2) - Checks:**
+Playlist (2) - Checks:
 - If playlist is used in any active schedules
-- Returns: ComponentID, ComponentName, ActiveInstances, ScheduleName (comma-separated)
+- Returns: ComponentID, ComponentName, ActiveInstances, ScheduleName 
+  (comma-separated)
 
-**Schedule (3) - Checks:**
+Schedule (3) - Checks:
 - If schedule is assigned to any active monitors
-- Checks both legacy `ScheduleId` field and `monitorschedule` table
-- Returns: ComponentID, ComponentName, ActiveInstances, MonitorName (comma-separated)
+- Checks both legacy ScheduleId field and monitorschedule table
+- Returns: ComponentID, ComponentName, ActiveInstances, MonitorName 
+  (comma-separated)
 
-**Monitor (4):**
+Monitor (4):
 - No validation implemented (monitors can always be deactivated)
 
-**Returns:** Table of active dependencies that would prevent safe deletion
+Returns: Table of active dependencies that would prevent safe deletion
 
-**Use Case:** Called before `usp_delete_admin_components` to warn user of active dependencies
+Use Case: Called before usp_delete_admin_components to warn user of active 
+dependencies
 
----
+--------------------------------------------------------------------------------
+UTILITY PROCEDURES
+--------------------------------------------------------------------------------
 
-### Utility Procedures
+22. usp_get_app_settings
+-------------------------
+Purpose: Retrieves all application configuration settings
 
-#### 22. **usp_get_app_settings**
-**Purpose:** Retrieves all application configuration settings
+Returns: All rows from appsettings table (key-value pairs)
 
-**Returns:** All rows from `appsettings` table (key-value pairs)
+23. usp_save_monitor_details (Legacy)
+--------------------------------------
+Purpose: Legacy procedure for simple monitor creation
 
----
+Note: Appears to be replaced by usp_save_monitor which has more features
 
-#### 23. **usp_save_monitor_details** (Legacy)
-**Purpose:** Legacy procedure for simple monitor creation
+24. Additional Procedures
+--------------------------
+Note: Procedure #24 is not documented in the provided schema. May be a legacy 
+or undocumented procedure.
 
-**Note:** Appears to be replaced by `usp_save_monitor` which has more features
+================================================================================
+RELATIONSHIPS & CONSTRAINTS
+================================================================================
 
----
-
-## Relationships & Constraints
-
-### Primary Keys
+--------------------------------------------------------------------------------
+PRIMARY KEYS
+--------------------------------------------------------------------------------
 All tables have auto-incrementing integer primary keys (Id/ID field)
 
-### Unique Constraints
-- **admin**: AdminRef, Email
-- **customer**: CustomerRef, Id
-- **media**: MediaRef
-- **monitors**: MonitorRef, MonitorUser
-- **monitor_heartbeat**: MonitorRef
-- **schedules**: ScheduleRef
+--------------------------------------------------------------------------------
+UNIQUE CONSTRAINTS
+--------------------------------------------------------------------------------
+- admin: AdminRef, Email
+- customer: CustomerRef, Id
+- media: MediaRef
+- monitors: MonitorRef, MonitorUser
+- monitor_heartbeat: MonitorRef
+- schedules: ScheduleRef
 
-### Foreign Keys
+--------------------------------------------------------------------------------
+FOREIGN KEYS
+--------------------------------------------------------------------------------
 
-#### playlistmedia → media
-- **Column:** `MediaId`
-- **References:** `media.Id`
-- **Purpose:** Links playlist items to media files
-- **On Delete:** Not specified (likely RESTRICT)
+playlistmedia → media:
+- Column: MediaId
+- References: media.Id
+- Purpose: Links playlist items to media files
+- On Delete: Not specified (likely RESTRICT)
 
-**Note:** This is the only explicit foreign key constraint in the database. Other relationships are maintained through application logic.
+Note: This is the only explicit foreign key constraint in the database. Other 
+relationships are maintained through application logic.
 
-### Logical Relationships (Not Enforced by FK)
+--------------------------------------------------------------------------------
+LOGICAL RELATIONSHIPS (Not Enforced by FK)
+--------------------------------------------------------------------------------
 
-#### User Ownership
-- **media.UserId** → admin.Id
-- **playlists.UserId** → admin.Id
-- **schedules.UserId** → admin.Id
-- **monitors.UserId** → admin.Id
-- **device.UserId** → admin.Id
+User Ownership:
+- media.UserId → admin.Id
+- playlists.UserId → admin.Id
+- schedules.UserId → admin.Id
+- monitors.UserId → admin.Id
+- device.UserId → admin.Id
 
-#### Playlist Associations
-- **playlistmedia.PlaylistId** → playlists.Id
-- **schedules.PlaylistId** → playlists.Id
-- **monitors.DefaultPlaylistId** → playlists.Id
+Playlist Associations:
+- playlistmedia.PlaylistId → playlists.Id
+- schedules.PlaylistId → playlists.Id
+- monitors.DefaultPlaylistId → playlists.Id
 
-#### Monitor-Schedule Relationships
-- **monitors.ScheduleId** → schedules.Id (Legacy single schedule)
-- **monitorschedule.MonitorId** → monitors.Id (Many-to-many)
-- **monitorschedule.ScheduleId** → schedules.Id (Many-to-many)
-- **schedules.MonitorId** → monitors.Id (Legacy reverse reference)
+Monitor-Schedule Relationships:
+- monitors.ScheduleId → schedules.Id (Legacy single schedule)
+- monitorschedule.MonitorId → monitors.Id (Many-to-many)
+- monitorschedule.ScheduleId → schedules.Id (Many-to-many)
+- schedules.MonitorId → monitors.Id (Legacy reverse reference)
 
-#### Authentication
-- **userloginlog.UserId** → admin.Id OR monitors.Id (depends on UserType)
+Authentication:
+- userloginlog.UserId → admin.Id OR monitors.Id (depends on UserType)
 
-### Indexes
+--------------------------------------------------------------------------------
+INDEXES
+--------------------------------------------------------------------------------
 
-**media:**
+media:
 - MediaName (MUL)
 - IsActive (MUL)
 - CreatedOn (MUL)
 
-**playlistmedia:**
+playlistmedia:
 - MediaId (MUL, FK)
 
-**monitor_heartbeat:**
+monitor_heartbeat:
 - LastHeartbeat (MUL)
 
-**MonitorStatus:**
+MonitorStatus:
 - LastHeartbeat (MUL)
 
-**userloginlog:**
+userloginlog:
 - Token (MUL)
 
----
+================================================================================
+DATABASE STATISTICS
+================================================================================
 
-## Database Statistics
+--------------------------------------------------------------------------------
+TABLE SIZE SUMMARY
+--------------------------------------------------------------------------------
+Table                 | Rows  | Data Size | Status
+----------------------|-------|-----------|----------------
+media                 | 1,412 | 294 KB    | Active
+playlistmedia         | 1,131 | 114 KB    | Active
+userloginlog          | 1,646 | 180 KB    | Active
+playlists             | 115   | 16 KB     | Active
+schedules             | 67    | 16 KB     | Active
+monitorschedule       | 37    | 16 KB     | Active
+apiuri                | 36    | 16 KB     | Active
+monitors              | 33    | 16 KB     | Active
+admin                 | 9     | 16 KB     | Active
+device                | 3     | 16 KB     | Active
+appsettings           | 2     | 16 KB     | Active
+monitor_heartbeat     | 1     | 16 KB     | Active
+Others                | 0     | -         | Unused/Legacy
 
-### Table Size Summary
-| Table | Rows | Data Size | Status |
-|-------|------|-----------|--------|
-| media | 1,412 | 294 KB | Active |
-| playlistmedia | 1,131 | 114 KB | Active |
-| userloginlog | 1,646 | 180 KB | Active |
-| playlists | 115 | 16 KB | Active |
-| schedules | 67 | 16 KB | Active |
-| monitorschedule | 37 | 16 KB | Active |
-| apiuri | 36 | 16 KB | Active |
-| monitors | 33 | 16 KB | Active |
-| admin | 9 | 16 KB | Active |
-| device | 3 | 16 KB | Active |
-| appsettings | 2 | 16 KB | Active |
-| monitor_heartbeat | 1 | 16 KB | Active |
-| Others | 0 | - | Unused/Legacy |
+Total Active Data: ~596 KB (excluding unused tables)
 
-**Total Active Data:** ~596 KB (excluding unused tables)
-
-### Storage Engine
-All tables use **InnoDB** engine with:
+--------------------------------------------------------------------------------
+STORAGE ENGINE
+--------------------------------------------------------------------------------
+All tables use InnoDB engine with:
 - Transaction support (ACID compliance)
 - Row-level locking
 - Foreign key support
 - Crash recovery
 
-### Collations
-- **Primary:** `utf8mb4_0900_ai_ci` (most tables)
-- **Legacy:** `latin1_swedish_ci` (apiuri, customeraddress, userloginlog)
-- **Specific:** `utf8mb3_general_ci` (customer), `utf8mb3_bin` (requestlog)
+--------------------------------------------------------------------------------
+COLLATIONS
+--------------------------------------------------------------------------------
+- Primary: utf8mb4_0900_ai_ci (most tables)
+- Legacy: latin1_swedish_ci (apiuri, customeraddress, userloginlog)
+- Specific: utf8mb3_general_ci (customer), utf8mb3_bin (requestlog)
 
-### Last Update Activity
+--------------------------------------------------------------------------------
+LAST UPDATE ACTIVITY
+--------------------------------------------------------------------------------
 Most recent updates (as of 2025-12-15):
-- **userloginlog**: 06:02:57 (Active sessions)
-- **device**: 06:02:55 (Device tokens)
-- **media**: 05:46:19 (Media uploads)
-- **monitorschedule**: 04:36:30 (Schedule assignments)
-- **schedules**: 04:36:23 (Schedule updates)
+- userloginlog: 06:02:57 (Active sessions)
+- device: 06:02:55 (Device tokens)
+- media: 05:46:19 (Media uploads)
+- monitorschedule: 04:36:30 (Schedule assignments)
+- schedules: 04:36:23 (Schedule updates)
 
----
+================================================================================
+KEY SYSTEM FEATURES
+================================================================================
 
-## Key System Features
-
-### 1. **Multi-Tenant Architecture**
+1. MULTI-TENANT ARCHITECTURE
+-----------------------------
 - Each admin user owns their media, playlists, schedules, and monitors
-- Data isolation through `UserId` fields
+- Data isolation through UserId fields
 - No data sharing between admin accounts
 
-### 2. **Authentication System**
+2. AUTHENTICATION SYSTEM
+-------------------------
 - UUID-based authentication tokens
 - Session management with login/logout tracking
 - Device token registration for push notifications
 - API endpoint validation with auth requirements
 
-### 3. **Soft Delete Pattern**
-- All main entities use `IsActive` flag instead of hard deletes
+3. SOFT DELETE PATTERN
+-----------------------
+- All main entities use IsActive flag instead of hard deletes
 - Maintains data integrity and audit trail
 - Exception: Schedules use hard delete in delete procedure
 
-### 4. **Media Type Intelligence**
+4. MEDIA TYPE INTELLIGENCE
+---------------------------
 - Automatic media type detection from MIME types and extensions
 - Special handling for GIFs (separate from images)
 - Video duration tracking vs. image display duration
-- **Duration Logic:**
+- Duration Logic:
   - Videos: NULL in playlistmedia (use MediaDuration from media table)
   - Images: 10-60 seconds (user-specified per playlist)
 
-### 5. **Flexible Scheduling**
+5. FLEXIBLE SCHEDULING
+----------------------
 - Two playback modes:
-  - **Range Mode** (FixedTimePlayback=0): Active throughout date/time range
-  - **Fixed Mode** (FixedTimePlayback=1): Active only during specific time window
+  - Range Mode (FixedTimePlayback=0): Active throughout date/time range
+  - Fixed Mode (FixedTimePlayback=1): Active only during specific time window
 - Day-of-week filtering
 - Fallback to default playlist when no schedule is active
-- **Many-to-many** monitor-schedule relationships
+- Many-to-many monitor-schedule relationships
 
-### 6. **Monitor Management**
+6. MONITOR MANAGEMENT
+---------------------
 - Real-time status tracking via heartbeats
 - Current playback status monitoring
 - Orientation support (Portrait/Landscape)
 - Multiple schedule support per monitor
 
-### 7. **Playlist System**
+7. PLAYLIST SYSTEM
+------------------
 - Ordered media playback with priority
 - Per-item duration control (except videos)
 - Dynamic schedule-based playlist switching
 - Media reusability across multiple playlists
 
-### 8. **Security Features**
+8. SECURITY FEATURES
+--------------------
 - Password hashing (PasswordHash field)
 - Token-based authentication
 - Request logging for audit trails
 - API endpoint authorization control
 
----
+================================================================================
+SCHEMA EVOLUTION NOTES
+================================================================================
 
-## Schema Evolution Notes
+--------------------------------------------------------------------------------
+LEGACY FIELDS (Maintained for Backward Compatibility)
+--------------------------------------------------------------------------------
+- monitors.ScheduleId: Legacy single schedule reference (now using 
+  monitorschedule table)
+- schedules.MonitorId: Legacy reverse reference
+- admin.Password: Plain password (deprecated, use PasswordHash)
+- monitors.SlideTime: Appears in one SP but not in table definition
 
-### Legacy Fields (Maintained for Backward Compatibility)
-- **monitors.ScheduleId**: Legacy single schedule reference (now using monitorschedule table)
-- **schedules.MonitorId**: Legacy reverse reference
-- **admin.Password**: Plain password (deprecated, use PasswordHash)
-- **monitors.SlideTime**: Appears in one SP but not in table definition
-
-### Unused/Legacy Tables
+--------------------------------------------------------------------------------
+UNUSED/LEGACY TABLES
+--------------------------------------------------------------------------------
 - customer, customeraddress (Customer management - unused)
 - packages (Subscription packages - unused)
 - scheduleplaylist (Replaced by direct FK relationship)
 - userpostdetails, userposts (Social features - unused)
 - requestlog (Logging - no active data)
 
-### Recent Additions (2025)
-- **MonitorStatus** table (Dec 9, 2025) - Real-time monitor tracking
-- **monitor_heartbeat** table (Dec 5, 2025) - Monitor health monitoring
-- **Duration** field in playlistmedia - Per-item duration control
-- **Orientation** field in monitors - Display orientation support
+--------------------------------------------------------------------------------
+RECENT ADDITIONS (2025)
+--------------------------------------------------------------------------------
+- MonitorStatus table (Dec 9, 2025) - Real-time monitor tracking
+- monitor_heartbeat table (Dec 5, 2025) - Monitor health monitoring
+- Duration field in playlistmedia - Per-item duration control
+- Orientation field in monitors - Display orientation support
 
----
+================================================================================
+RECOMMENDATIONS
+================================================================================
 
-## Recommendations
+--------------------------------------------------------------------------------
+PERFORMANCE
+--------------------------------------------------------------------------------
+1. Add index on media.UserId for faster user-specific queries
+2. Add index on playlists.UserId for user filtering
+3. Add composite index on playlistmedia(PlaylistId, Priority) for ordered 
+   retrieval
+4. Add index on schedules.UserId for user filtering
 
-### Performance
-1. Add index on `media.UserId` for faster user-specific queries
-2. Add index on `playlists.UserId` for user filtering
-3. Add composite index on `playlistmedia(PlaylistId, Priority)` for ordered retrieval
-4. Add index on `schedules.UserId` for user filtering
-
-### Data Integrity
+--------------------------------------------------------------------------------
+DATA INTEGRITY
+--------------------------------------------------------------------------------
 1. Add foreign key constraints for:
    - media.UserId → admin.Id
    - playlists.UserId → admin.Id
@@ -1148,31 +1145,37 @@ Most recent updates (as of 2025-12-15):
    - monitorschedule.MonitorId → monitors.Id
    - monitorschedule.ScheduleId → schedules.Id
 
-### Schema Cleanup
+--------------------------------------------------------------------------------
+SCHEMA CLEANUP
+--------------------------------------------------------------------------------
 1. Remove unused tables (customer, customeraddress, packages, etc.)
 2. Standardize collations (migrate all to utf8mb4_0900_ai_ci)
 3. Remove legacy fields (monitors.ScheduleId, schedules.MonitorId)
 4. Remove unused stored procedures (usp_save_monitor_details)
 
-### Consistency
+--------------------------------------------------------------------------------
+CONSISTENCY
+--------------------------------------------------------------------------------
 1. Standardize timestamp fields (use TIMESTAMP instead of VARCHAR(45))
 2. Add UpdatedOn to all tables for audit trail
 3. Implement cascade delete rules for foreign keys
 4. Add NOT NULL constraints where appropriate
 
----
+================================================================================
+VERSION HISTORY
+================================================================================
 
-## Version History
+Version | Date          | Changes
+--------|---------------|------------------------------------------------------
+1.0     | 2021-2023     | Initial database creation
+2.0     | 2025-11-28+   | Major updates: Duration field, Monitor orientation, 
+        |               | Many-to-many schedules
+2.1     | 2025-12-05    | Monitor heartbeat system
+2.2     | 2025-12-09    | MonitorStatus table, Optimized procedures
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2021-2023 | Initial database creation |
-| 2.0 | 2025-11-28+ | Major updates: Duration field, Monitor orientation, Many-to-many schedules |
-| 2.1 | 2025-12-05 | Monitor heartbeat system |
-| 2.2 | 2025-12-09 | MonitorStatus table, Optimized procedures |
+================================================================================
+REPORT END
+================================================================================
 
----
-
-**Report End**
-
-*This documentation was generated from database schema inspection on December 15, 2025*
+This documentation was generated from database schema inspection on 
+December 15, 2025
