@@ -233,7 +233,7 @@ module.exports.getAdminComponentWithPaginationRequest = (requestParams) => {
     isActive: joi.number().optional().valid(0, 1, null),
     userId: joi.number().optional().allow(null),
     pageNumber: joi.number().optional().min(1).default(1),
-    pageSize: joi.number().optional().min(1).max(100).default(10),
+    pageSize: joi.number().optional().min(1).max(100).default(12),
   });
   return joiSchema.validate(requestParams);
 };
