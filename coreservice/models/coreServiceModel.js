@@ -421,10 +421,8 @@ module.exports.SaveMediaRequest = saveMediaRequest;
 module.exports.SaveMediaResponse = saveMediaResponse;
 module.exports.GetAdminComponentRequest = getAdminComponentRequest;
 module.exports.GetAdminComponentResponse = getAdminComponentResponse;
-module.exports.GetAdminComponentDetailsRequest =
-  getAdminComponentDetailsRequest;
-module.exports.GetAdminComponentDetailsResponse =
-  getAdminComponentDetailsResponse;
+module.exports.GetAdminComponentDetailsRequest =getAdminComponentDetailsRequest;
+module.exports.GetAdminComponentDetailsResponse = getAdminComponentDetailsResponse;
 module.exports.SavePlaylistRequest = savePlaylistRequest;
 module.exports.SavePlaylistResponse = savePlaylistResponse;
 module.exports.SaveScheduleRequest = saveScheduleRequest;
@@ -433,10 +431,8 @@ module.exports.SaveMonitorRequest = saveMonitorRequest;
 module.exports.SaveMonitorResponse = saveMonitorResponse;
 module.exports.DeleteAdminComponentsRequest = deleteAdminComponentsRequest;
 module.exports.DeleteAdminComponentsResponse = deleteAdminComponentsResponse;
-module.exports.ValidateDeleteAdminComponentsRequest =
-  validateDeleteAdminComponentsRequest;
-module.exports.ValidateDeleteAdminComponentsResponse =
-  validateDeleteAdminComponentsResponse;
+module.exports.ValidateDeleteAdminComponentsRequest = validateDeleteAdminComponentsRequest;
+module.exports.ValidateDeleteAdminComponentsResponse = validateDeleteAdminComponentsResponse;
 module.exports.AdminLogoutResponse = adminLogoutResponse;
 module.exports.MonitorDetailsRequest = monitorDetailsRequest;
 module.exports.MonitorDetailsResponse = monitorDetailsResponse;
