@@ -682,4 +682,4 @@ var getMonitorStatusResponse = (functionContext, resolvedResult) => {
   logger.logInfo(`getMonitorStatusResponse :: ${JSON.stringify(response)}`);
   logger.logInfo("getMonitorStatusResponse completed");
 };
-// End of file
+// End of file..
