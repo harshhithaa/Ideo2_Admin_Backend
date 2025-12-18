@@ -296,7 +296,7 @@ var fetchMonitorDetailsResponse = (
   logger.logInfo(`fetchMonitorDetailsResponse completed`);
 };
 
-var processScheduleDetails = (functionContext, resolvedResult) => {
+var processScheduleDetails = async (functionContext, resolvedResult) => {
   var logger = functionContext.logger;
   logger.logInfo(`processScheduleDetails() invoked`);
 
@@ -305,7 +305,7 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
   let playlistType = 'Default';
   let scheduleRef = null;
   let scheduleDetailsObj = null;
-  
+
   // Get current day and time
   const now = moment().utc().tz("Asia/Kolkata");
   const today = now.format('dddd').toLowerCase();
@@ -358,6 +358,34 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     logger.logInfo(`processScheduleDetails() :: No schedule found, using last result set with ${defaultPlaylist.length} items`);
   }
 
+  // ✅ FIXED: Fetch default playlist name using PlaylistRef (varchar UUID)
+  let defaultPlaylistName = 'Default';
+  try {
+    const monitorInfo = resolvedResult[0] && resolvedResult[0][0] ? resolvedResult[0][0] : null;
+    if (monitorInfo && (monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist)) {
+      const db = require("../database/database");
+      const ref = monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist;
+      logger.logInfo(`processScheduleDetails() :: Fetching playlist for PlaylistRef: ${ref}`);
+
+      // Query by PlaylistRef (varchar UUID) — use exact table/column present in your schema
+      let nameResult = await db.knex.raw("SELECT Name FROM playlists WHERE PlaylistRef = ? LIMIT 1", [ref]);
+      if (!nameResult || !nameResult[0] || !nameResult[0][0]) {
+        // fallback table name variation (case/tablename differences)
+        nameResult = await db.knex.raw("SELECT Name FROM Playlist WHERE PlaylistRef = ? LIMIT 1", [ref]);
+      }
+      if (nameResult && nameResult[0] && nameResult[0][0] && nameResult[0][0].Name) {
+        defaultPlaylistName = nameResult[0][0].Name;
+        logger.logInfo(`processScheduleDetails() :: ✅ Found playlist: ${defaultPlaylistName}`);
+      } else {
+        logger.logInfo(`processScheduleDetails() :: ⚠️ No playlist found for PlaylistRef: ${ref} - result: ${JSON.stringify(nameResult)}`);
+      }
+    } else {
+      logger.logInfo(`processScheduleDetails() :: No DefaultPlaylistRef found in monitor info`);
+    }
+  } catch (errFetchName) {
+    logger.logInfo(`processScheduleDetails() :: Error while fetching playlist name: ${errFetchName}`);
+  }
+
   // Decide playlist selection with same logic
   if (scheduleDetails && scheduleDetails.Days) {
     let daysArr = [];
@@ -372,7 +400,7 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     logger.logInfo(`processScheduleDetails() :: Today code: ${todayCode}`);
 
     const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(todayCode);
-    
+
     let isWithinTimeRange = false;
     if (scheduleDetails.StartTime && scheduleDetails.EndTime) {
       const startTime = scheduleDetails.StartTime.substring(0, 8); // HH:mm:ss
@@ -393,12 +421,11 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     }
 
     if (isScheduledDay && isWithinTimeRange && isWithinDateRange) {
-      // Use scheduled playlist ONLY if scheduledPlaylist exists and has items.
       if (scheduledPlaylist && scheduledPlaylist.length) {
         finalPlaylist = scheduledPlaylist;
         playlistType = 'Scheduled';
         scheduleRef = scheduleDetails?.ScheduleRef || scheduleRef;
-        // Preferred name sources: schedule title -> scheduledPlaylist metadata -> fallback
+        // determine name from schedule or scheduledPlaylist metadata
         if (scheduleDetails && (scheduleDetails.Title || scheduleDetails.PlaylistName)) {
           playlistName = scheduleDetails.Title || scheduleDetails.PlaylistName;
         } else if (scheduledPlaylist[0] && (scheduledPlaylist[0].PlaylistName || scheduledPlaylist[0].Name)) {
@@ -408,36 +435,24 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
         }
         logger.logInfo(`processScheduleDetails() :: ✅ Using scheduled playlist (${finalPlaylist.length} items) name=${playlistName}`);
       } else {
-        // scheduled playlist was empty — fall back to default and mark as Default
+        // scheduled playlist empty — fall back to default and use DB name if available
         finalPlaylist = defaultPlaylist || [];
         playlistType = 'Default';
         scheduleRef = null;
         if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
           playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
         } else {
-          // try monitor-level default name if present in result sets
-          try {
-            const monitorInfo = resolvedResult[0] && resolvedResult[0][0] ? resolvedResult[0][0] : null;
-            playlistName = monitorInfo?.DefaultPlaylistName || monitorInfo?.DefaultPlaylist || 'Default';
-          } catch (e) {
-            playlistName = 'Default';
-          }
+          playlistName = defaultPlaylistName;
         }
         logger.logInfo(`processScheduleDetails() :: Scheduled playlist empty — falling back to default (${finalPlaylist.length} items) name=${playlistName}`);
       }
     } else {
       finalPlaylist = defaultPlaylist || [];
       playlistType = 'Default';
-       // Try to obtain default playlist name from defaultPlaylist entries or monitor info
       if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
         playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
       } else {
-        try {
-          const monitorInfo = resolvedResult[0] && resolvedResult[0][0] ? resolvedResult[0][0] : null;
-          playlistName = monitorInfo?.DefaultPlaylistName || monitorInfo?.DefaultPlaylist || 'Default';
-        } catch (e) {
-          playlistName = 'Default';
-        }
+        playlistName = defaultPlaylistName;
       }
       scheduleRef = null;
       logger.logInfo(`processScheduleDetails() :: Using default playlist (${finalPlaylist.length} items) name=${playlistName}`);
@@ -448,8 +463,9 @@ var processScheduleDetails = (functionContext, resolvedResult) => {
     if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
       playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
     } else {
-      playlistName = 'Default';
+      playlistName = defaultPlaylistName;
     }
+    scheduleRef = null;
     logger.logInfo(`processScheduleDetails() :: No schedule, using default playlist (${finalPlaylist.length} items) name=${playlistName}`);
   }
 
