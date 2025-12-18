@@ -69,20 +69,29 @@ module.exports.savePlaylistRequest = (requestParams) => {
     playlistRef: joi.string().optional().allow(null),
     playlistName: joi.string().required(),
     description: joi.string().optional().allow(null),
+    // preserve existing isActive requirement
     isActive: joi.number().required(),
+    // new optional frontend fields (won't fail validation if present)
+    durationMode: joi.string().optional().valid('Default', 'Custom').allow(null),
+    defaultDuration: joi.number().optional().allow(null),
     playlist: joi
       .array()
       .items(
+        // allow Priority and other extra keys — keep validation for required fields
         joi.object({
           MediaRef: joi.string().required(),
           IsActive: joi.number().required().allow(1, 0),
           Duration: joi.number().optional().allow(null).min(1).max(60),
-        })
+          Priority: joi.number().optional().allow(null)
+        }).unknown(true)
       )
       .optional()
       .allow(null),
-    currentTs: joi.string().optional(),
-  });
+    currentTs: joi.string().optional()
+  })
+  // allow top-level extra keys (safe for forward-compatibility)
+  .unknown(true);
+
   return joiSchema.validate(requestParams);
 };
 
