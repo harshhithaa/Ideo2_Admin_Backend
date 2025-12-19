@@ -59,7 +59,7 @@ const deleteLogs = () => {
   // const zip = new JSZip();
 
   try {
-    const testFolder = "/root/IdeogramBE_prod/coreservice/Logs/";
+    const testFolder = "/root/Ideogram_Backend/Ideo2_Admin_Backend/coreservice/Logs/";
     const testFiles = testFolder + fs.readdirSync(testFolder);
 
     logger.logInfo(`Inside Test folder ${testFolder}`);
