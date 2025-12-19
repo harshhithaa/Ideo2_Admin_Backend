@@ -9,6 +9,7 @@ var fileConfiguration = require("../common/settings").FileConfiguration;
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
 var ffmpeg = require("fluent-ffmpeg");
 var path = require("path");
+const fs = require('fs');
 
 exports.getValue = function (requestArray, key) {
   var requestArrayLength = requestArray ? requestArray.length : 0;
@@ -80,3 +81,53 @@ exports.getFileUploadConfig = multer({
     fileSize: parseInt(fileConfiguration.FileSize || 10) * 1024 * 1024, // Default 10MB if not set
   },
 });
+
+// Periodic cleanup: delete files older than threshold from local upload folder.
+// Configure via env vars:
+// LOCALSTORAGE_CLEANUP_MINUTES (default 10) - file age threshold
+// LOCALSTORAGE_CLEANUP_INTERVAL_MINUTES (default 30) - run interval
+(function startLocalStorageCleanup() {
+  const storagePath = fileConfiguration && fileConfiguration.LocalStorage;
+  if (!storagePath) {
+    console.log('LocalStorage cleanup: no LocalStorage configured, skipping cleanup.');
+    return;
+  }
+
+  const thresholdMinutes = parseInt(process.env.LOCALSTORAGE_CLEANUP_MINUTES || '10', 10);
+  const intervalMinutes = parseInt(process.env.LOCALSTORAGE_CLEANUP_INTERVAL_MINUTES || '30', 10);
+  const thresholdMs = Math.max(0, thresholdMinutes) * 60 * 1000;
+  const intervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
+
+  async function runCleanupOnce() {
+    try {
+      const files = await fs.promises.readdir(storagePath);
+      for (const f of files) {
+        try {
+          const full = path.join(storagePath, f);
+          const st = await fs.promises.stat(full);
+          if (!st.isFile()) continue;
+          const age = Date.now() - st.mtimeMs;
+          if (age > thresholdMs) {
+            await fs.promises.unlink(full);
+            console.log(`LocalStorage cleanup: deleted ${full}`);
+          }
+        } catch (fileErr) {
+          console.log(`LocalStorage cleanup: error handling file ${f}: ${fileErr && fileErr.message}`);
+        }
+      }
+    } catch (err) {
+      console.log(`LocalStorage cleanup: error reading directory ${storagePath}: ${err && err.message}`);
+    }
+  }
+
+  // initial run and schedule
+  runCleanupOnce().catch((e) => console.log('LocalStorage cleanup initial run error:', e && e.message));
+  const timer = setInterval(() => {
+    runCleanupOnce().catch((e) => console.log('LocalStorage cleanup scheduled run error:', e && e.message));
+  }, intervalMs);
+
+  // expose stop for tests/debug if needed
+  module.exports._stopLocalStorageCleanup = () => clearInterval(timer);
+
+  console.log(`LocalStorage cleanup started: path=${storagePath}, thresholdMinutes=${thresholdMinutes}, intervalMinutes=${intervalMinutes}`);
+})();
