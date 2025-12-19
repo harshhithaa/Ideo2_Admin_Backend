@@ -39,53 +39,112 @@ global.monitorSockets = new Map();
 // Initialize global cache for monitor status
 global.monitorStatusCache = {};
 
+// Config: cleanup interval, stale threshold and cache cap
+const CACHE_CLEAN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+const MONITOR_STALE_MS = 2 * 60 * 1000; // 2 minutes stale threshold
+const MAX_MONITORS_IN_CACHE = 500;
+
+// Periodic cache cleanup (summary logging only)
+setInterval(() => {
+  try {
+    const now = Date.now();
+    const keys = Object.keys(global.monitorStatusCache);
+    let removed = 0;
+
+    keys.forEach((monitorRef) => {
+      const entry = global.monitorStatusCache[monitorRef];
+      const last = new Date(entry?.lastUpdated || entry?.receivedAt || 0).getTime();
+      if (now - last > MONITOR_STALE_MS) {
+        delete global.monitorStatusCache[monitorRef];
+        removed++;
+      }
+    });
+
+    if (removed > 0) {
+      logger.logInfo(`[CacheCleanup] Removed ${removed} stale monitor entries from cache`);
+    }
+  } catch (e) {
+    logger.logInfo(`[CacheCleanup] Error: ${e && e.message}`);
+  }
+}, CACHE_CLEAN_INTERVAL_MS);
+
 io.on("connection", (socket) => {
   logger.logInfo(`[Socket] Connected: ${socket.id}`);
 
-  // ✅ FIX: Listen for 'register_monitor' (matches TV app)
   socket.on("register_monitor", (data) => {
     const { monitorRef, monitorName } = data || {};
-    logger.logInfo(`[Socket] register_monitor received: ${JSON.stringify(data)}`);
+    logger.logInfo(`[Socket] register_monitor received: ${monitorRef || 'unknown'}`);
     
     if (monitorRef) {
       global.monitorSockets.set(monitorRef, socket);
-      logger.logInfo(`[Socket] Monitor registered: ${monitorRef} (${monitorName})`);
-      socket.emit("registration_confirmed", { 
-        success: true, 
-        monitorRef,
-        monitorName 
-      });
+      logger.logInfo(`[Socket] Monitor registered: ${monitorRef} (${monitorName || 'unnamed'})`);
+      socket.emit("registration_confirmed", { success: true, monitorRef, monitorName });
     } else {
       logger.logInfo(`[Socket] Registration failed: No monitorRef provided`);
     }
   });
 
-  // ✅ KEEP: Handle status updates from TV app
+  // Handle status updates from TV app — DO NOT log every heartbeat
   socket.on("status_response", (data) => {
-    logger.logInfo(`[Socket] status_response from ${data?.monitorRef}`);
-    
-    if (data && data.monitorRef) {
-      // ✅ Store ALL data from TV app (including health fields)
-      global.monitorStatusCache[data.monitorRef] = {
-        ...data, // This includes: currentPlaylist, currentMedia, screenState, errors, healthStatus, etc.
-        socketId: socket.id,
-        lastUpdated: new Date(),
-        receivedAt: new Date().toISOString()
-      };
-      
-      logger.logInfo(`[Socket] Status cached for ${data.monitorRef}: ${JSON.stringify({
-        currentPlaylist: data.currentPlaylist,
-        currentMedia: data.currentMedia,
-        healthStatus: data.healthStatus,
-        screenState: data.screenState,
-        errorsCount: data.errors?.length || 0
-      })}`);
+    if (!data || !data.monitorRef) {
+      // Log invalid payloads (rare)
+      logger.logInfo(`[Socket] Invalid status_response received (missing monitorRef)`);
+      return;
+    }
+
+    const monitorRef = data.monitorRef;
+    const prev = global.monitorStatusCache[monitorRef];
+
+    // Enforce cache size limit: don't add new monitors if cap reached
+    const currentCacheSize = Object.keys(global.monitorStatusCache).length;
+    if (!prev && currentCacheSize >= MAX_MONITORS_IN_CACHE) {
+      logger.logInfo(`[Socket] Cache capacity reached (${MAX_MONITORS_IN_CACHE}). Ignoring new monitor ${monitorRef}`);
+      return;
+    }
+
+    // Update lastUpdated/receivedAt and store full payload fields for admin UI
+    global.monitorStatusCache[monitorRef] = {
+      monitorRef,
+      monitorName: data.monitorName || (prev && prev.monitorName) || null,
+
+      // Full payload fields for admin display
+      currentPlaylist: data.currentPlaylist || (prev && prev.currentPlaylist) || null,
+      playlistType: data.playlistType || (prev && prev.playlistType) || null,
+      scheduleRef: data.scheduleRef || (prev && prev.scheduleRef) || null,
+      currentMedia: data.currentMedia || (prev && prev.currentMedia) || null,
+      mediaIndex: typeof data.mediaIndex !== "undefined" ? data.mediaIndex : (prev && prev.mediaIndex) || 0,
+      totalMedia: typeof data.totalMedia !== "undefined" ? data.totalMedia : (prev && prev.totalMedia) || 0,
+      screenState: data.screenState || (prev && prev.screenState) || null,
+      errors: Array.isArray(data.errors) ? data.errors : (prev && prev.errors) || [],
+      healthStatus: data.healthStatus || (prev && prev.healthStatus) || null,
+      isProgressing: typeof data.isProgressing !== "undefined" ? data.isProgressing : (prev && prev.isProgressing) || false,
+      playbackPosition: typeof data.playbackPosition !== "undefined" ? data.playbackPosition : (prev && prev.playbackPosition) || null,
+
+      // summary/counts for quick checks
+      errorsCount: Array.isArray(data.errors) ? data.errors.length : (prev && prev.errorsCount) || 0,
+
+      // Metadata
+      socketId: socket.id,
+      lastUpdated: new Date(),
+      receivedAt: new Date().toISOString()
+    };
+
+    // Logging policy: only log first-seen, health status changes, or presence of errors
+    if (!prev) {
+      logger.logInfo(`[Socket] First heartbeat cached for ${monitorRef} at ${global.monitorStatusCache[monitorRef].receivedAt}`);
     } else {
-      logger.logInfo(`[Socket] Invalid status_response: ${JSON.stringify(data)}`);
+      const prevHealth = prev.healthStatus || null;
+      const newHealth = data.healthStatus || null;
+      const errorsCount = global.monitorStatusCache[monitorRef].errorsCount || 0;
+      if (newHealth && newHealth !== prevHealth) {
+        logger.logInfo(`[Socket] Health change ${monitorRef}: ${prevHealth} -> ${newHealth} @ ${global.monitorStatusCache[monitorRef].receivedAt}`);
+      } else if (errorsCount > 0 && errorsCount !== (prev.errorsCount || 0)) {
+        // log presence of errors only (summary)
+        logger.logInfo(`[Socket] Errors reported by ${monitorRef}: count=${errorsCount} @ ${global.monitorStatusCache[monitorRef].receivedAt}`);
+      }
     }
   });
 
-  // ✅ Handle admin requesting status
   socket.on("request_status", (data) => {
     const { monitorRef } = data || {};
     logger.logInfo(`[Socket] Admin requesting status for: ${monitorRef}`);
@@ -99,18 +158,14 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ✅ FIX: Don't delete cache on disconnect (keep for offline detection)
   socket.on("disconnect", () => {
     logger.logInfo(`[Socket] Disconnected: ${socket.id}`);
     
-    // Remove from active sockets
     for (let [mRef, s] of global.monitorSockets.entries()) {
       if (s.id === socket.id) {
         global.monitorSockets.delete(mRef);
         logger.logInfo(`[Socket] Monitor socket removed: ${mRef}`);
-        
-        // ✅ DON'T delete cache - keep last known state for offline detection
-        // The cache will show 'offline' status based on lastUpdated timestamp
+        // Keep last known cache (cleanup job will remove stale entries)
         logger.logInfo(`[Socket] Keeping status cache for offline detection: ${mRef}`);
         break;
       }

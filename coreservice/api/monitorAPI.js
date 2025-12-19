@@ -306,7 +306,6 @@ var processScheduleDetails = async (functionContext, resolvedResult) => {
   let scheduleRef = null;
   let scheduleDetailsObj = null;
 
-  // Get current day and time
   const now = moment().utc().tz("Asia/Kolkata");
   const today = now.format('dddd').toLowerCase();
   const currentTime = now.format('HH:mm:ss');
@@ -314,164 +313,17 @@ var processScheduleDetails = async (functionContext, resolvedResult) => {
   logger.logInfo(`processScheduleDetails() :: Today: ${today}, Current Time: ${currentTime}`);
 
   const DAY_NAME_TO_CODE = {
-    'sunday': '7',
-    'monday': '1',
-    'tuesday': '2',
-    'wednesday': '3',
-    'thursday': '4',
-    'friday': '5',
-    'saturday': '6'
+    'sunday': '7','monday': '1','tuesday': '2','wednesday': '3',
+    'thursday': '4','friday': '5','saturday': '6'
   };
 
-  let scheduleDetails = null;
-  let scheduledPlaylist = null;
-  let defaultPlaylist = null;
+  // Collect only non-empty result sets
+  const resultSets = Array.isArray(resolvedResult) ? resolvedResult.filter(rs => Array.isArray(rs) && rs.length > 0) : [];
+  logger.logInfo(`processScheduleDetails() :: total result sets: ${resultSets.length}`);
 
-  const validResults = resolvedResult.filter(
-    (item) => Array.isArray(item) && item.length > 0
-  );
-
-  logger.logInfo(`processScheduleDetails() :: Valid result sets: ${validResults.length}`);
-
-  for (let i = 0; i < validResults.length; i++) {
-    const currentSet = validResults[i];
-
-    if (currentSet[0] && currentSet[0].hasOwnProperty("ScheduleRef")) {
-      scheduleDetails = currentSet[0];
-      scheduleDetailsObj = scheduleDetails;
-      logger.logInfo(`processScheduleDetails() :: Found schedule at index ${i}`);
-      logger.logInfo(`processScheduleDetails() :: Schedule Details: ${JSON.stringify(scheduleDetails)}`);
-
-      if (i > 0) {
-        scheduledPlaylist = validResults[i - 1];
-      }
-
-      defaultPlaylist = validResults[validResults.length - 1];
-      scheduleRef = scheduleDetails.ScheduleRef || scheduleDetails.ScheduleRef;
-      logger.logInfo(`processScheduleDetails() :: Default playlist has ${defaultPlaylist.length} items`);
-      break;
-    }
-  }
-
-  if (!defaultPlaylist && validResults.length > 0) {
-    defaultPlaylist = validResults[validResults.length - 1];
-    logger.logInfo(`processScheduleDetails() :: No schedule found, using last result set with ${defaultPlaylist.length} items`);
-  }
-
-  // ✅ FIXED: Fetch default playlist name using PlaylistRef (varchar UUID)
-  let defaultPlaylistName = 'Default';
-  try {
-    const monitorInfo = resolvedResult[0] && resolvedResult[0][0] ? resolvedResult[0][0] : null;
-    if (monitorInfo && (monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist)) {
-      const db = require("../database/database");
-      const ref = monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist;
-      logger.logInfo(`processScheduleDetails() :: Fetching playlist for PlaylistRef: ${ref}`);
-
-      // Query by PlaylistRef (varchar UUID) — use exact table/column present in your schema
-      let nameResult = await db.knex.raw("SELECT Name FROM playlists WHERE PlaylistRef = ? LIMIT 1", [ref]);
-      if (!nameResult || !nameResult[0] || !nameResult[0][0]) {
-        // fallback table name variation (case/tablename differences)
-        nameResult = await db.knex.raw("SELECT Name FROM Playlist WHERE PlaylistRef = ? LIMIT 1", [ref]);
-      }
-      if (nameResult && nameResult[0] && nameResult[0][0] && nameResult[0][0].Name) {
-        defaultPlaylistName = nameResult[0][0].Name;
-        logger.logInfo(`processScheduleDetails() :: ✅ Found playlist: ${defaultPlaylistName}`);
-      } else {
-        logger.logInfo(`processScheduleDetails() :: ⚠️ No playlist found for PlaylistRef: ${ref} - result: ${JSON.stringify(nameResult)}`);
-      }
-    } else {
-      logger.logInfo(`processScheduleDetails() :: No DefaultPlaylistRef found in monitor info`);
-    }
-  } catch (errFetchName) {
-    logger.logInfo(`processScheduleDetails() :: Error while fetching playlist name: ${errFetchName}`);
-  }
-
-  // Decide playlist selection with same logic
-  if (scheduleDetails && scheduleDetails.Days) {
-    let daysArr = [];
-    try {
-      daysArr = JSON.parse(scheduleDetails.Days);
-      logger.logInfo(`processScheduleDetails() :: Schedule days (raw): ${JSON.stringify(daysArr)}`);
-    } catch (e) {
-      logger.logInfo(`processScheduleDetails() :: Days parse error ${e}`);
-    }
-
-    const todayCode = DAY_NAME_TO_CODE[today];
-    logger.logInfo(`processScheduleDetails() :: Today code: ${todayCode}`);
-
-    const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(todayCode);
-
-    let isWithinTimeRange = false;
-    if (scheduleDetails.StartTime && scheduleDetails.EndTime) {
-      const startTime = scheduleDetails.StartTime.substring(0, 8); // HH:mm:ss
-      const endTime = scheduleDetails.EndTime.substring(0, 8);
-      logger.logInfo(`processScheduleDetails() :: Schedule Time Range: ${startTime} - ${endTime}`);
-      isWithinTimeRange = currentTime >= startTime && currentTime <= endTime;
-      logger.logInfo(`processScheduleDetails() :: Is within time range: ${isWithinTimeRange}`);
-    }
-
-    let isWithinDateRange = true;
-    if (scheduleDetails.StartDate && scheduleDetails.EndDate) {
-      const currentDate = now.format('YYYY-MM-DD');
-      const startDate = moment(scheduleDetails.StartDate).format('YYYY-MM-DD');
-      const endDate = moment(scheduleDetails.EndDate).format('YYYY-MM-DD');
-      logger.logInfo(`processScheduleDetails() :: Schedule Date Range: ${startDate} - ${endDate}`);
-      isWithinDateRange = currentDate >= startDate && currentDate <= endDate;
-      logger.logInfo(`processScheduleDetails() :: Is within date range: ${isWithinDateRange}`);
-    }
-
-    if (isScheduledDay && isWithinTimeRange && isWithinDateRange) {
-      if (scheduledPlaylist && scheduledPlaylist.length) {
-        finalPlaylist = scheduledPlaylist;
-        playlistType = 'Scheduled';
-        scheduleRef = scheduleDetails?.ScheduleRef || scheduleRef;
-        // determine name from schedule or scheduledPlaylist metadata
-        if (scheduleDetails && (scheduleDetails.Title || scheduleDetails.PlaylistName)) {
-          playlistName = scheduleDetails.Title || scheduleDetails.PlaylistName;
-        } else if (scheduledPlaylist[0] && (scheduledPlaylist[0].PlaylistName || scheduledPlaylist[0].Name)) {
-          playlistName = scheduledPlaylist[0].PlaylistName || scheduledPlaylist[0].Name;
-        } else {
-          playlistName = 'Scheduled';
-        }
-        logger.logInfo(`processScheduleDetails() :: ✅ Using scheduled playlist (${finalPlaylist.length} items) name=${playlistName}`);
-      } else {
-        // scheduled playlist empty — fall back to default and use DB name if available
-        finalPlaylist = defaultPlaylist || [];
-        playlistType = 'Default';
-        scheduleRef = null;
-        if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
-          playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
-        } else {
-          playlistName = defaultPlaylistName;
-        }
-        logger.logInfo(`processScheduleDetails() :: Scheduled playlist empty — falling back to default (${finalPlaylist.length} items) name=${playlistName}`);
-      }
-    } else {
-      finalPlaylist = defaultPlaylist || [];
-      playlistType = 'Default';
-      if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
-        playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
-      } else {
-        playlistName = defaultPlaylistName;
-      }
-      scheduleRef = null;
-      logger.logInfo(`processScheduleDetails() :: Using default playlist (${finalPlaylist.length} items) name=${playlistName}`);
-    }
-  } else {
-    finalPlaylist = defaultPlaylist || [];
-    playlistType = 'Default';
-    if (defaultPlaylist && defaultPlaylist[0] && (defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name)) {
-      playlistName = defaultPlaylist[0].PlaylistName || defaultPlaylist[0].Name;
-    } else {
-      playlistName = defaultPlaylistName;
-    }
-    scheduleRef = null;
-    logger.logInfo(`processScheduleDetails() :: No schedule, using default playlist (${finalPlaylist.length} items) name=${playlistName}`);
-  }
-
-  // Normalize Duration (existing logic)
-  try {
-    finalPlaylist = finalPlaylist.map((item) => {
+  // Helper to normalize durations
+  const normalizePlaylist = (list) => {
+    return (list || []).map(item => {
       let duration;
       if (item.Duration !== undefined && item.Duration !== null) {
         duration = item.Duration;
@@ -480,18 +332,97 @@ var processScheduleDetails = async (functionContext, resolvedResult) => {
       } else {
         duration = 10;
       }
-      return {
-        ...item,
-        Duration: duration,
-      };
+      return {...item, Duration: duration};
     });
+  };
 
-    logger.logInfo(`processScheduleDetails() :: Normalized ${finalPlaylist.length} items`);
+  // find default playlist name (from monitor info row if available)
+  let defaultPlaylistName = 'Default';
+  try {
+    const monitorInfo = resolvedResult[0] && resolvedResult[0][0] ? resolvedResult[0][0] : null;
+    if (monitorInfo && (monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist)) {
+      const db = require("../database/database");
+      const ref = monitorInfo.DefaultPlaylistRef || monitorInfo.DefaultPlaylist;
+      logger.logInfo(`processScheduleDetails() :: Fetching playlist name for ref: ${ref}`);
+      let nameResult = await db.knex.raw("SELECT Name FROM playlists WHERE PlaylistRef = ? LIMIT 1", [ref]);
+      if (!nameResult || !nameResult[0] || !nameResult[0][0]) {
+        nameResult = await db.knex.raw("SELECT Name FROM Playlist WHERE PlaylistRef = ? LIMIT 1", [ref]);
+      }
+      if (nameResult && nameResult[0] && nameResult[0][0] && nameResult[0][0].Name) {
+        defaultPlaylistName = nameResult[0][0].Name;
+        logger.logInfo(`processScheduleDetails() :: Found default playlist name: ${defaultPlaylistName}`);
+      }
+    }
   } catch (e) {
-    logger.logInfo(`processScheduleDetails() :: normalization error ${e}`);
-    finalPlaylist = [];
+    logger.logInfo(`processScheduleDetails() :: error fetching default playlist name: ${e}`);
   }
 
+  // Identify sets that are playlist arrays vs schedule-detail single-row sets
+  // Stored proc pattern: playlist rows, then a schedule-details row (has ScheduleRef), then default playlist (playlist rows)
+  for (let idx = 0; idx < resultSets.length; idx++) {
+    const set = resultSets[idx];
+    // schedule detail row(s) typically include ScheduleRef property
+    if (set[0] && set[0].hasOwnProperty("ScheduleRef")) {
+      // scheduled playlist should be the previous result-set (if present)
+      const scheduledPlaylistSet = (idx - 1) >= 0 ? resultSets[idx - 1] : null;
+      const scheduleDetails = set[0];
+      logger.logInfo(`processScheduleDetails() :: Found schedule at resultSet index ${idx} scheduleRef=${scheduleDetails.ScheduleRef}`);
+
+      // parse days safely
+      let daysArr = [];
+      try { daysArr = scheduleDetails.Days ? JSON.parse(scheduleDetails.Days) : []; } catch (e) { logger.logInfo(`Days parse error: ${e}`); }
+
+      const todayCode = DAY_NAME_TO_CODE[today];
+      const isScheduledDay = Array.isArray(daysArr) && daysArr.includes(todayCode);
+      logger.logInfo(`processScheduleDetails() :: scheduleDays=${JSON.stringify(daysArr)} todayCode=${todayCode} isDay=${isScheduledDay}`);
+
+      // time/date checks
+      let isWithinTimeRange = true;
+      if (scheduleDetails.StartTime && scheduleDetails.EndTime) {
+        const startTime = scheduleDetails.StartTime.substring(0,8);
+        const endTime = scheduleDetails.EndTime.substring(0,8);
+        isWithinTimeRange = currentTime >= startTime && currentTime <= endTime;
+      }
+      let isWithinDateRange = true;
+      if (scheduleDetails.StartDate && scheduleDetails.EndDate) {
+        const currentDate = now.format('YYYY-MM-DD');
+        const startDate = moment(scheduleDetails.StartDate).format('YYYY-MM-DD');
+        const endDate = moment(scheduleDetails.EndDate).format('YYYY-MM-DD');
+        isWithinDateRange = currentDate >= startDate && currentDate <= endDate;
+      }
+
+      logger.logInfo(`processScheduleDetails() :: timeRange=${isWithinTimeRange} dateRange=${isWithinDateRange}`);
+
+      if (isScheduledDay && isWithinTimeRange && isWithinDateRange && scheduledPlaylistSet && scheduledPlaylistSet.length) {
+        finalPlaylist = normalizePlaylist(scheduledPlaylistSet);
+        playlistType = 'Scheduled';
+        scheduleRef = scheduleDetails.ScheduleRef;
+        scheduleDetailsObj = scheduleDetails;
+        playlistName = scheduleDetails.Title || scheduleDetails.PlaylistName || (scheduledPlaylistSet[0] && (scheduledPlaylistSet[0].PlaylistName || scheduledPlaylistSet[0].Name)) || defaultPlaylistName;
+        logger.logInfo(`processScheduleDetails() :: Selected scheduled playlistRef=${scheduleRef} items=${finalPlaylist.length} name=${playlistName}`);
+        break; // choose first matching schedule (if multiple active, choose the first)
+      }
+    }
+  }
+
+  // if no scheduled match found, fall back to last playlist-like result set
+  if (!finalPlaylist.length) {
+    // try last resultSet that looks like a playlist (no ScheduleRef and contains MediaName/MediaPath)
+    for (let i = resultSets.length - 1; i >= 0; i--) {
+      const s = resultSets[i];
+      if (s && s.length && !(s[0] && s[0].hasOwnProperty("ScheduleRef"))) {
+        finalPlaylist = normalizePlaylist(s);
+        playlistType = 'Default';
+        playlistName = (s[0] && (s[0].PlaylistName || s[0].Name)) || defaultPlaylistName;
+        scheduleRef = null;
+        logger.logInfo(`processScheduleDetails() :: Falling back to default playlist items=${finalPlaylist.length} name=${playlistName}`);
+        break;
+      }
+    }
+  }
+
+  // ensure final normalization and safe return
+  finalPlaylist = Array.isArray(finalPlaylist) ? finalPlaylist : [];
   logger.logInfo(`processScheduleDetails() :: Returning ${finalPlaylist.length} items, name=${playlistName}, type=${playlistType}, scheduleRef=${scheduleRef}`);
   return {
     playlist: finalPlaylist,
@@ -523,7 +454,10 @@ module.exports.UpdateMonitorStatus = async (req, res) => {
   );
 
   var updateStatusRequest = new coreRequestModel.UpdateMonitorStatusRequest(req);
-  logger.logInfo(`UpdateMonitorStatus() :: Request Object : ${JSON.stringify(updateStatusRequest)}`);
+  logger.logInfo(`UpdateMonitorStatus() :: Request Object : ${JSON.stringify({
+    MonitorRef: updateStatusRequest.MonitorRef,
+    Status: updateStatusRequest.Status
+  })}`);
 
   var validateRequest = joiValidationModel.updateMonitorStatusRequest(updateStatusRequest);
 
@@ -541,13 +475,23 @@ module.exports.UpdateMonitorStatus = async (req, res) => {
   }
 
   try {
-    // Store status in cache/database with timestamp
-    await databaseHelper.updateMonitorStatus(
-      functionContext,
-      updateStatusRequest
-    );
+    // DO NOT write to DB on every heartbeat to avoid DB storm.
+    // Instead update in-memory cache for realtime reads.
+    if (updateStatusRequest && updateStatusRequest.MonitorRef) {
+      const ref = updateStatusRequest.MonitorRef;
+      const prev = global.monitorStatusCache[ref] || null;
+      global.monitorStatusCache[ref] = {
+        monitorRef: ref,
+        Status: updateStatusRequest.Status || (prev && prev.Status) || null,
+        CurrentMedia: updateStatusRequest.CurrentMedia || (prev && prev.CurrentMedia) || null,
+        CurrentPlaylist: updateStatusRequest.CurrentPlaylist || (prev && prev.CurrentPlaylist) || null,
+        lastUpdated: new Date(),
+        receivedAt: new Date().toISOString()
+      };
+      logger.logInfo(`UpdateMonitorStatus() :: Cached status for ${ref} at ${global.monitorStatusCache[ref].receivedAt}`);
+    }
 
-    logger.logInfo(`UpdateMonitorStatus() :: Status updated for monitor: ${updateStatusRequest.MonitorRef}`);
+    // Intentionally skip databaseHelper.updateMonitorStatus(...) here per request
     updateMonitorStatusResponse(functionContext, { success: true });
   } catch (errUpdateStatus) {
     if (!errUpdateStatus.ErrorMessage && !errUpdateStatus.ErrorCode) {
