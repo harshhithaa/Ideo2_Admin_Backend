@@ -815,13 +815,12 @@ var processMedia = async (functionContext, req, requestContext) => {
   if (canUploadFile) {
     if (req.hasOwnProperty("files")) {
       for (let count = 0; count < req.files.length; count++) {
-        const toBeUploaded = fs.readFileSync(req.files[count].path);
         var file = req.files[count];
-        const stream = fs.createReadStream(req.files[count].path);
-
+        
         let duration = 0;
         if (file.mimetype === "video/mp4") {
-          duration = await getVideoDurationInSeconds(stream);
+          // Pass file path directly instead of stream
+          duration = await getVideoDurationInSeconds(req.files[count].path);
         }
         // console.log(duration);
         logger.logInfo(
@@ -880,10 +879,11 @@ var processMedia = async (functionContext, req, requestContext) => {
           fileDuration: duration,
         });
 
+        // Pass file path instead of buffer for streaming upload
         var fileUrl = await fileUpload(
           functionContext,
           requestContext.file.srcPath,
-          toBeUploaded
+          req.files[count].path  // Pass path instead of buffer
         );
 
         console.log(fileUrl);
@@ -896,6 +896,19 @@ var processMedia = async (functionContext, req, requestContext) => {
       //   functionContext,
       //   requestContext.serverUploadDetails
       // );
+    }
+  }
+
+  // Clean up local files after upload
+  for (let count = 0; count < req.files.length; count++) {
+    const localPath = req.files[count].path;
+    try {
+      fs.unlink(localPath, (err) => {
+        if (err) logger.logInfo(`Cleanup warning for ${localPath}: ${err}`);
+        else logger.logInfo(`Cleaned up local file: ${localPath}`);
+      });
+    } catch (e) {
+      logger.logInfo(`Error during cleanup: ${e}`);
     }
   }
 
@@ -924,10 +937,10 @@ var saveMediaResponse = async (functionContext, resolvedResult) => {
   logger.logInfo(`saveMediaResponse completed`);
 };
 
-async function fileUpload(functionContext, filePath, file) {
+async function fileUpload(functionContext, filePath, localFilePath) {
   var logger = functionContext.logger;
 
-  logger.logInfo(`fileUpload() Invoked()`);
+  logger.logInfo(`fileUpload() Invoked() - streaming from: ${localFilePath}`);
 
   const spacesEndpoint = new AWS.Endpoint(process.env.DO_SPACES_ENDPOINT);
 
@@ -937,71 +950,61 @@ async function fileUpload(functionContext, filePath, file) {
     secretAccessKey: process.env.DO_SPACES_SECRET,
   });
 
-  // const client = new ftp.Client();
-  // client.ftp.verbose = true;
-  // await client.access(FTPSettings);
+  // Get file stats for progress tracking
+  const fileStats = fs.statSync(localFilePath);
+  const fileSize = fileStats.size;
+  logger.logInfo(`File size: ${(fileSize / (1024 * 1024)).toFixed(2)} MB`);
 
-  // const element = fileDetails[file];
+  // Create a read stream instead of loading into memory
+  const fileStream = fs.createReadStream(localFilePath);
+  
+  // Track upload progress
+  let uploadedBytes = 0;
+  fileStream.on('data', (chunk) => {
+    uploadedBytes += chunk.length;
+    const progress = Math.round((uploadedBytes / fileSize) * 100);
+    if (progress % 10 === 0) { // Log every 10%
+      logger.logInfo(`Upload progress: ${progress}%`);
+    }
+  });
 
   const params = {
     Bucket: process.env.DO_SPACES_NAME,
     Key: `ideogram/${filePath.split("/")[1]}`,
-    Body: file,
+    Body: fileStream,  // Stream instead of buffer
     ACL: "public-read",
   };
 
   try {
+    logger.logInfo(`Starting upload to: ${params.Key}`);
     const stored = await s3.upload(params).promise();
-    console.log(stored);
+    
+    logger.logInfo(`Upload completed: ${stored.Location}`);
+    
+    // Clean up the local file after successful upload
+    fs.unlink(localFilePath, (err) => {
+      if (err) {
+        logger.logInfo(`File cleanup warning: ${err}`);
+      } else {
+        logger.logInfo(`Successfully cleaned up local file: ${localFilePath}`);
+      }
+    });
+    
     return stored.Location;
   } catch (err) {
-    logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(err)}`);
+    logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify({
+      message: err.message,
+      code: err.code,
+      statusCode: err.statusCode
+    })}`);
+    
     functionContext.error = new coreRequestModel.ErrorModel(
       constant.ErrorMessage.ApplicationError,
-
-      constant.ErrorCode.ApplicationError
+      constant.ErrorCode.ApplicationError,
+      err.message
     );
     throw functionContext.error;
   }
-
-  // s3.upload(
-  //   {
-  //     Bucket: process.env.DO_SPACES_NAME,
-  //     Key: `ideogram/${fileDetails[0].srcPath.split("/")[1]}`,
-  //     Body: file,
-  //     ACL: "public-read",
-  //   },
-  //   (err, data) => {
-  //     return new Promise((resolve, reject) => {
-  //       if (err) {
-  //         logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(err)}`);
-  //         functionContext.error = new coreRequestModel.ErrorModel(
-  //           constant.ErrorMessage.ApplicationError,
-
-  //           constant.ErrorCode.ApplicationError
-  //         );
-  //         reject(err);
-  //       } else {
-  //         resolve(data.Location);
-  //       }
-  //     });
-  // if (err) {
-  //   logger.logInfo(`fileUpload() :: Error :: ${JSON.stringify(err)}`);
-  //   functionContext.error = new coreRequestModel.ErrorModel(
-  //     constant.ErrorMessage.ApplicationError,
-
-  //     constant.ErrorCode.ApplicationError
-  //   );
-  //   throw functionContext.error;
-  // } else {
-  //   console.log("Your file has been uploaded successfully!", data);
-  //   return new Promise((resolve, reject) => {
-  //     resolve(data.Location);
-  //   });
-  // }
-
-  // await client.uploadFrom(element.srcPath, element.destPath);
-  // client.close();
 }
 
 var getAdminComponentsResponse = async (functionContext, resolvedResult) => {

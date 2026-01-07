@@ -78,7 +78,8 @@ exports.getFileUploadConfig = multer({
     }
   },
   limits: {
-    fileSize: parseInt(fileConfiguration.FileSize || 10) * 1024 * 1024, // Default 10MB if not set
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB max file size
+    files: 10 // max 10 files per request
   },
 });
 
