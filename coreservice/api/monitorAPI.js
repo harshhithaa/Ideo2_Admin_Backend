@@ -456,8 +456,10 @@ module.exports.UpdateMonitorStatus = async (req, res) => {
   var updateStatusRequest = new coreRequestModel.UpdateMonitorStatusRequest(req);
   logger.logInfo(`UpdateMonitorStatus() :: Request Object : ${JSON.stringify({
     MonitorRef: updateStatusRequest.MonitorRef,
+    CurrentPlaylist: updateStatusRequest.CurrentPlaylist,
+    TotalMedia: updateStatusRequest.TotalMedia,
     Status: updateStatusRequest.Status
-  })}`);
+  })}`); 
 
   var validateRequest = joiValidationModel.updateMonitorStatusRequest(updateStatusRequest);
 
@@ -475,23 +477,40 @@ module.exports.UpdateMonitorStatus = async (req, res) => {
   }
 
   try {
-    // DO NOT write to DB on every heartbeat to avoid DB storm.
-    // Instead update in-memory cache for realtime reads.
-    if (updateStatusRequest && updateStatusRequest.MonitorRef) {
+    // ✅ CRITICAL FIX: Validate data completeness before caching
+    const hasValidPlaylist = updateStatusRequest.CurrentPlaylist && 
+                            updateStatusRequest.CurrentPlaylist !== 'null' && 
+                            updateStatusRequest.CurrentPlaylist !== 'Unknown Playlist';
+    const hasValidMedia = updateStatusRequest.TotalMedia > 0;
+
+    // ✅ Only update cache if we have complete, valid data
+    if (updateStatusRequest && updateStatusRequest.MonitorRef && hasValidPlaylist && hasValidMedia) {
       const ref = updateStatusRequest.MonitorRef;
       const prev = global.monitorStatusCache[ref] || null;
+      
       global.monitorStatusCache[ref] = {
         monitorRef: ref,
+        monitorName: updateStatusRequest.MonitorName || (prev && prev.monitorName) || null,
         Status: updateStatusRequest.Status || (prev && prev.Status) || null,
-        CurrentMedia: updateStatusRequest.CurrentMedia || (prev && prev.CurrentMedia) || null,
-        CurrentPlaylist: updateStatusRequest.CurrentPlaylist || (prev && prev.CurrentPlaylist) || null,
+        currentMedia: updateStatusRequest.CurrentMedia || (prev && prev.currentMedia) || null,
+        currentPlaylist: updateStatusRequest.CurrentPlaylist || (prev && prev.currentPlaylist) || null,
+        playlistType: updateStatusRequest.PlaylistType || (prev && prev.playlistType) || 'Default',
+        scheduleRef: updateStatusRequest.ScheduleRef || (prev && prev.scheduleRef) || null,
+        mediaIndex: updateStatusRequest.MediaIndex !== undefined ? updateStatusRequest.MediaIndex : (prev && prev.mediaIndex) || 0,
+        totalMedia: updateStatusRequest.TotalMedia || (prev && prev.totalMedia) || 0,
+        screenState: updateStatusRequest.ScreenState || (prev && prev.screenState) || 'active',
+        errors: updateStatusRequest.Errors || (prev && prev.errors) || [],
+        healthStatus: updateStatusRequest.HealthStatus || (prev && prev.healthStatus) || 'unknown',
         lastUpdated: new Date(),
         receivedAt: new Date().toISOString()
       };
-      logger.logInfo(`UpdateMonitorStatus() :: Cached status for ${ref} at ${global.monitorStatusCache[ref].receivedAt}`);
+      
+      logger.logInfo(`UpdateMonitorStatus() :: ✅ Cached VALID status for ${ref} - Playlist: ${updateStatusRequest.CurrentPlaylist}, Media: ${updateStatusRequest.TotalMedia}`);
+    } else {
+      // ✅ Log but DON'T cache incomplete data
+      logger.logInfo(`UpdateMonitorStatus() :: ⚠️ REJECTED incomplete data for ${updateStatusRequest.MonitorRef} - Playlist: ${updateStatusRequest.CurrentPlaylist}, Media: ${updateStatusRequest.TotalMedia}`);
     }
 
-    // Intentionally skip databaseHelper.updateMonitorStatus(...) here per request
     updateMonitorStatusResponse(functionContext, { success: true });
   } catch (errUpdateStatus) {
     if (!errUpdateStatus.ErrorMessage && !errUpdateStatus.ErrorCode) {
@@ -569,7 +588,7 @@ module.exports.GetMonitorStatus = async (req, res) => {
   } catch (error) {
     logger.logInfo(`GetMonitorStatus() :: Error: ${JSON.stringify(error)}`);
     functionContext.error = new coreRequestModel.ErrorModel(
-      constant.ErrorMessage.ApplicationError,
+      'No Internet Connection',  // ✅ CHANGE THIS LINE from constant.ErrorMessage.ApplicationError
       constant.ErrorCode.ApplicationError,
       error
     );
@@ -593,16 +612,25 @@ var getMonitorStatusResponse = (functionContext, resolvedResult) => {
     const now = new Date();
     const secondsSinceUpdate = Math.floor((now - lastUpdate) / 1000);
     
-    // ✅ Keep 30 second threshold - if monitor sends updates every 10s, this is reasonable
-    const isOnline = secondsSinceUpdate <= 30;
+    // ✅ Stricter threshold: 20 seconds (since heartbeat is every 5-10s)
+    const isOnline = secondsSinceUpdate <= 20;
     
-    logger.logInfo(`GetMonitorStatus :: Last update: ${lastUpdate}, Now: ${now}, Seconds: ${secondsSinceUpdate}, Online: ${isOnline}`);
+    // ✅ Additional validation: Check if data is complete
+    const hasValidData = resolvedResult.currentPlaylist && 
+                        resolvedResult.currentPlaylist !== 'null' && 
+                        resolvedResult.totalMedia > 0;
+    
+    logger.logInfo(`GetMonitorStatus :: Last update: ${lastUpdate}, Now: ${now}, Seconds: ${secondsSinceUpdate}, Online: ${isOnline}, ValidData: ${hasValidData}`);
+    
+    // ✅ Override status if offline OR data is invalid
+    const finalStatus = (isOnline && hasValidData) ? 'online' : 'offline';
+    const finalHealthStatus = (isOnline && hasValidData) ? resolvedResult.healthStatus : 'error';
     
     response.Error = null;
     response.Details = {
       MonitorRef: resolvedResult.monitorRef,
       MonitorName: resolvedResult.monitorName,
-      Status: isOnline ? 'online' : 'offline',
+      Status: finalStatus,
       CurrentMedia: resolvedResult.currentMedia,
       CurrentPlaylist: resolvedResult.currentPlaylist,
       PlaylistType: resolvedResult.playlistType,
@@ -611,14 +639,29 @@ var getMonitorStatusResponse = (functionContext, resolvedResult) => {
       LastUpdate: resolvedResult.receivedAt || lastUpdate.toISOString(),
       SecondsSinceUpdate: secondsSinceUpdate,
       screenState: resolvedResult.screenState,
-      errors: resolvedResult.errors,
-      healthStatus: resolvedResult.healthStatus
+      errors: !isOnline ? [
+        ...(resolvedResult.errors || []),
+        {
+          type: 'connection_lost',
+          message: 'No Internet Connection',
+          severity: 'error',
+          timestamp: now.toISOString()
+        }
+      ] : (resolvedResult.errors || []),
+      healthStatus: finalHealthStatus
     };
   } else {
+    // ✅ No cached data at all = definitely offline
     response.Error = null;
     response.Details = {
-      Status: 'unknown',
-      Message: 'No status data available'
+      Status: 'offline',
+      healthStatus: 'error',
+      Message: 'No status data available - Monitor may be offline',
+      errors: [{
+        type: 'no_data',
+        message: 'Monitor has never sent status updates',
+        severity: 'error'
+      }]
     };
   }
 
